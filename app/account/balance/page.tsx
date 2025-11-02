@@ -40,12 +40,10 @@ export default function BalancePage() {
 
   useEffect(() => {
     if (user) {
-      // Rafraîchir les données utilisateur à chaque fois qu'on arrive sur la page
-      refreshUser();
       loadDepositAddress();
       loadPendingDeposits();
     }
-  }, [user, refreshUser, loadDepositAddress, loadPendingDeposits]);
+  }, [user, loadDepositAddress, loadPendingDeposits]);
 
   const handleCheckDeposit = async () => {
     if (!txHash || !selectedCurrency) {

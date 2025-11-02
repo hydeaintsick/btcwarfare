@@ -27,22 +27,10 @@ export default function AccountLayout({
   }, [isConnecting]);
 
   useEffect(() => {
-    const refreshBalance = async () => {
-      if (isConnected && user) {
-        try {
-          const balance = await apiClient.getBalance();
-          setBalanceETH(balance.balanceETH);
-          setBalanceUSDT(balance.balanceUSDT);
-        } catch {
-          setBalanceETH(user.balanceETH || 0);
-          setBalanceUSDT(user.balanceUSDT || 0);
-        }
-      }
-    };
-
-    refreshBalance();
-    const interval = setInterval(refreshBalance, 5000);
-    return () => clearInterval(interval);
+    if (isConnected && user) {
+      setBalanceETH(user.balanceETH || 0);
+      setBalanceUSDT(user.balanceUSDT || 0);
+    }
   }, [isConnected, user]);
 
   // Redirect to balance if at /account

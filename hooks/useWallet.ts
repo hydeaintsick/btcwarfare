@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { apiClient } from '@/lib/api';
+import { useState, useEffect, useCallback } from "react";
+import { ethers } from "ethers";
+import { apiClient } from "@/lib/api";
 
 interface User {
   id: string;
@@ -26,7 +26,7 @@ export function useWallet() {
       setIsConnected(true);
     } catch {
       // Token invalide
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem("auth_token");
       apiClient.setToken(null);
       setIsConnected(false);
       setUser(null);
@@ -39,7 +39,7 @@ export function useWallet() {
   useEffect(() => {
     const checkInitialAuth = async () => {
       setIsCheckingAuth(true);
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       if (token) {
         // Vérifier le token et récupérer les infos utilisateur
         await checkAuth();
@@ -58,15 +58,19 @@ export function useWallet() {
 
       // Vérifier si MetaMask est installé
       if (!window.ethereum) {
-        throw new Error('MetaMask is not installed. Please install MetaMask to continue.');
+        throw new Error(
+          "MetaMask is not installed. Please install MetaMask to continue."
+        );
       }
 
       // Demander la connexion au wallet
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
       if (accounts.length === 0) {
-        throw new Error('No account found');
+        throw new Error("No account found");
       }
 
       const walletAddress = accounts[0];
@@ -79,24 +83,27 @@ export function useWallet() {
       const signature = await signer.signMessage(message);
 
       // Vérifier la signature avec le backend
-      const { token, user: userData } = await apiClient.verify(walletAddress, signature);
+      const { token, user: userData } = await apiClient.verify(
+        walletAddress,
+        signature
+      );
 
       // Stocker le token
       apiClient.setToken(token);
-      
+
       // Mettre à jour l'état
       setUser(userData);
       setIsConnected(true);
-      
+
       // Rafraîchir les infos utilisateur pour être sûr
       try {
         const { user: freshUser } = await apiClient.getMe();
         setUser(freshUser);
       } catch (err) {
-        console.error('Error refreshing user data:', err);
+        console.error("Error refreshing user data:", err);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to connect wallet');
+      setError(err.message || "Failed to connect wallet");
       setIsConnected(false);
       setUser(null);
     } finally {
@@ -108,34 +115,34 @@ export function useWallet() {
     setUser(null);
     setIsConnected(false);
     apiClient.setToken(null);
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem("auth_token");
   };
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const { user: userData } = await apiClient.getMe();
       setUser(userData);
       return userData;
     } catch (err) {
-      console.error('Error refreshing user data:', err);
+      console.error("Error refreshing user data:", err);
       return null;
     }
-  };
+  }, []);
 
   const sendTransaction = async (
     to: string,
     amount: number,
-    currency: 'ETH' | 'USDT' = 'ETH'
+    currency: "ETH" | "USDT" = "ETH"
   ): Promise<{ hash: string; receipt?: any }> => {
     try {
       if (!window.ethereum) {
-        throw new Error('MetaMask is not installed');
+        throw new Error("MetaMask is not installed");
       }
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      if (currency === 'ETH') {
+      if (currency === "ETH") {
         // Transaction ETH native
         const tx = await signer.sendTransaction({
           to,
@@ -150,24 +157,24 @@ export function useWallet() {
         // Transaction USDT (ERC20)
         // ABI minimal pour transfer
         const erc20Abi = [
-          'function transfer(address to, uint256 amount) external returns (bool)',
+          "function transfer(address to, uint256 amount) external returns (bool)",
         ];
 
         // Adresse du contrat USDT (mainnet)
-        const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
-        
+        const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+
         const contract = new ethers.Contract(USDT_ADDRESS, erc20Abi, signer);
-        
+
         // USDT a 6 décimales
         const amountWei = ethers.parseUnits(amount.toString(), 6);
-        
+
         const tx = await contract.transfer(to, amountWei);
         const receipt = await tx.wait();
-        
+
         return { hash: tx.hash, receipt };
       }
     } catch (err: any) {
-      throw new Error(err.message || 'Failed to send transaction');
+      throw new Error(err.message || "Failed to send transaction");
     }
   };
 
@@ -183,4 +190,3 @@ export function useWallet() {
     address: user?.walletAddress || null,
   };
 }
-
