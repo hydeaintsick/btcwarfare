@@ -36,35 +36,40 @@ class MatchingService {
           return null;
         }
 
+        // Calculer les frais de 5% sur chaque pari
+        const stakeFee = stakeAmount * 0.05;
+        const totalStakeWithFee = stakeAmount + stakeFee;
+
         const longBalance = currency === 'ETH' ? longUser.balanceETH : longUser.balanceUSDT;
         const shortBalance = currency === 'ETH' ? shortUser.balanceETH : shortUser.balanceUSDT;
 
-        if (longBalance < stakeAmount || shortBalance < stakeAmount) {
+        if (longBalance < totalStakeWithFee || shortBalance < totalStakeWithFee) {
           // Pas assez de fonds, retirer de la queue
           await Queue.deleteOne({ _id: longQueue._id });
           await Queue.deleteOne({ _id: shortQueue._id });
           return null;
         }
 
-        // Prélever les montants
+        // Prélever les montants (stake + 5% de frais)
         if (currency === 'ETH') {
-          longUser.balanceETH -= stakeAmount;
-          shortUser.balanceETH -= stakeAmount;
+          longUser.balanceETH -= totalStakeWithFee;
+          shortUser.balanceETH -= totalStakeWithFee;
         } else {
-          longUser.balanceUSDT -= stakeAmount;
-          shortUser.balanceUSDT -= stakeAmount;
+          longUser.balanceUSDT -= totalStakeWithFee;
+          shortUser.balanceUSDT -= totalStakeWithFee;
         }
 
         await longUser.save();
         await shortUser.save();
 
-        // Créer les transactions de mise
+        // Créer les transactions de mise avec frais
         await Transaction.create({
           userId: longUser._id,
           type: 'stake',
           amount: stakeAmount,
           currency,
           status: 'completed',
+          feeAmount: stakeFee,
         });
 
         await Transaction.create({
@@ -73,10 +78,27 @@ class MatchingService {
           amount: stakeAmount,
           currency,
           status: 'completed',
+          feeAmount: stakeFee,
+        });
+
+        // Créer les transactions de frais pour la plateforme
+        await Transaction.create({
+          userId: longUser._id,
+          type: 'fee',
+          amount: stakeFee,
+          currency,
+          status: 'completed',
+        });
+
+        await Transaction.create({
+          userId: shortUser._id,
+          type: 'fee',
+          amount: stakeFee,
+          currency,
+          status: 'completed',
         });
 
         // Créer la battle
-        // Le prix de départ sera récupéré depuis le service de prix
         const battle = await Battle.create({
           longPlayer: longUser._id,
           shortPlayer: shortUser._id,
@@ -106,41 +128,64 @@ class MatchingService {
         return null;
       }
 
+      // Calculer les frais de 5% sur chaque pari
+      const stakeFee = stakeAmount * 0.05;
+      const totalStakeWithFee = stakeAmount + stakeFee;
+
       const longBalance = currency === 'ETH' ? longUser.balanceETH : longUser.balanceUSDT;
       const shortBalance = currency === 'ETH' ? shortUser.balanceETH : shortUser.balanceUSDT;
 
-      if (longBalance < stakeAmount || shortBalance < stakeAmount) {
+      if (longBalance < totalStakeWithFee || shortBalance < totalStakeWithFee) {
         // Pas assez de fonds, retirer de la queue
         await Queue.deleteOne({ _id: longQueue._id });
         await Queue.deleteOne({ _id: shortQueue._id });
         return null;
       }
 
-      // Prélever les montants
+      // Prélever les montants (stake + 5% de frais)
       if (currency === 'ETH') {
-        longUser.balanceETH -= stakeAmount;
-        shortUser.balanceETH -= stakeAmount;
+        longUser.balanceETH -= totalStakeWithFee;
+        shortUser.balanceETH -= totalStakeWithFee;
       } else {
-        longUser.balanceUSDT -= stakeAmount;
-        shortUser.balanceUSDT -= stakeAmount;
+        longUser.balanceUSDT -= totalStakeWithFee;
+        shortUser.balanceUSDT -= totalStakeWithFee;
       }
 
       await longUser.save();
       await shortUser.save();
 
-      // Créer les transactions de mise
+      // Créer les transactions de mise avec frais
       await Transaction.create({
         userId: longUser._id,
         type: 'stake',
         amount: stakeAmount,
         currency,
         status: 'completed',
+        feeAmount: stakeFee,
       });
 
       await Transaction.create({
         userId: shortUser._id,
         type: 'stake',
         amount: stakeAmount,
+        currency,
+        status: 'completed',
+        feeAmount: stakeFee,
+      });
+
+      // Créer les transactions de frais pour la plateforme
+      await Transaction.create({
+        userId: longUser._id,
+        type: 'fee',
+        amount: stakeFee,
+        currency,
+        status: 'completed',
+      });
+
+      await Transaction.create({
+        userId: shortUser._id,
+        type: 'fee',
+        amount: stakeFee,
         currency,
         status: 'completed',
       });

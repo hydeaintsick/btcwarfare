@@ -67,9 +67,9 @@ class BattleService {
       }
 
       // Calculer les montants
+      // Les frais de 5% ont déjà été prélevés lors de la mise, donc le winner récupère tout
       const totalStake = battle.stakeAmount * 2;
-      const commission = (totalStake * COMMISSION_RATE) / 100;
-      const winnerAmount = totalStake - commission;
+      const winnerAmount = totalStake;
 
       // Récupérer les utilisateurs
       const winner = await User.findById(winnerId);
@@ -96,15 +96,6 @@ class BattleService {
         userId: winnerId,
         type: 'win',
         amount: winnerAmount,
-        currency: battle.currency,
-        status: 'completed',
-        relatedBattleId: battleId,
-      });
-
-      await Transaction.create({
-        userId: winnerId,
-        type: 'commission',
-        amount: commission,
         currency: battle.currency,
         status: 'completed',
         relatedBattleId: battleId,

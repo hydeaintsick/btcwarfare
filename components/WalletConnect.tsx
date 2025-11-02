@@ -24,7 +24,7 @@ export function WalletConnect() {
           onClick={() => disconnect()}
           className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all text-sm font-medium border border-red-500/30"
         >
-          Déconnecter
+          Disconnect
         </button>
       </motion.div>
     );
@@ -40,7 +40,7 @@ export function WalletConnect() {
         disabled={isConnecting}
         className="px-6 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isConnecting ? 'Connexion...' : 'Connecter Wallet'}
+        {isConnecting ? 'Connecting...' : 'Connect Wallet'}
       </button>
     </motion.div>
   );

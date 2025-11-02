@@ -109,6 +109,38 @@ class ApiClient {
     }>('/wallet/deposits');
   }
 
+  async withdraw(amount: number, currency: 'ETH' | 'USDT', destinationAddress: string) {
+    return this.request<{
+      message: string;
+      transactionId: string;
+      amount: number;
+      fee: number;
+      total: number;
+      currency: string;
+      newBalance: number;
+    }>('/wallet/withdraw', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currency, destinationAddress }),
+    });
+  }
+
+  async getTransactions() {
+    return this.request<{
+      transactions: Array<{
+        id: string;
+        type: string;
+        amount: number;
+        currency: string;
+        fee?: number;
+        status: string;
+        txHash?: string;
+        relatedBattleId?: string;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>('/wallet/transactions');
+  }
+
   // Battle
   async enterBattle(position: 'long' | 'short', currency: 'ETH' | 'USDT') {
     return this.request<{

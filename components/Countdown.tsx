@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 interface CountdownProps {
-  startTime: bigint;
-  duration: number; // en secondes
+  startTime: number | bigint; // timestamp in seconds
+  duration: number; // in seconds
   onComplete?: () => void;
 }
 
@@ -64,7 +64,7 @@ export function Countdown({ startTime, duration, onComplete }: CountdownProps) {
       </div>
       {isComplete && (
         <p className="text-xl text-neon-pink font-bold animate-pulse-neon">
-          Battle terminée !
+          Battle finished!
         </p>
       )}
     </div>

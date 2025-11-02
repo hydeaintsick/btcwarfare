@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Header } from "@/components/Header";
 
 export const metadata: Metadata = {
   title: "BTCWarfare - Battle P2P Crypto",
-  description: "Plateforme de battle P2P pour parier sur le Bitcoin",
+  description: "Battle P2P platform for betting on Bitcoin",
 };
 
 export default function RootLayout({
@@ -13,9 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <body className="antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <Header />
+          <div className="pt-20">{children}</div>
+        </Providers>
       </body>
     </html>
   );

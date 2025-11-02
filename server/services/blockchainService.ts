@@ -29,7 +29,16 @@ class BlockchainService {
    */
   getDepositAddress(): string {
     if (!this.platformAddress) {
-      throw new Error('Platform wallet not configured');
+      // Si le wallet n'est pas configuré, générer une adresse de placeholder
+      // (Pour le développement uniquement - en production, cela doit être configuré)
+      if (process.env.NODE_ENV === 'development') {
+        // Générer une adresse factice pour le développement
+        const randomWallet = ethers.Wallet.createRandom();
+        this.platformAddress = randomWallet.address;
+        console.warn('⚠️  WARNING: Using random deposit address for development. Set PLATFORM_PRIVATE_KEY in production!');
+        return this.platformAddress;
+      }
+      throw new Error('Platform wallet not configured. Please set PLATFORM_PRIVATE_KEY in environment variables.');
     }
     return this.platformAddress;
   }

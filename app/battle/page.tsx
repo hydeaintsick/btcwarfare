@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
-import { WalletConnect } from "@/components/WalletConnect";
 import { Countdown } from "@/components/Countdown";
 import { useWallet } from "@/hooks/useWallet";
 import {
@@ -26,7 +24,7 @@ export default function BattlePage() {
 
   const handleEnterRoom = async (isLong: boolean) => {
     if (!isConnected) {
-      alert("Veuillez connecter votre wallet");
+      alert("Please connect your wallet");
       return;
     }
 
@@ -36,7 +34,7 @@ export default function BattlePage() {
       setSelectedPosition(null);
     } catch (error: any) {
       console.error("Error entering room:", error);
-      alert(error?.message || "Erreur lors de l'entrée dans la room");
+      alert(error?.message || "Error entering the room");
       setSelectedPosition(null);
     }
   };
@@ -46,11 +44,11 @@ export default function BattlePage() {
       await resolveBattle(battleId);
     } catch (error: any) {
       console.error("Error resolving battle:", error);
-      alert(error?.message || "Erreur lors de la résolution de la battle");
+      alert(error?.message || "Error resolving the battle");
     }
   };
 
-  // Vérifier si la battle peut être résolue (60 secondes écoulées)
+  // Check if battle can be resolved (60 seconds elapsed)
   const canResolve = battle
     ? new Date(battle.startTime).getTime() + BATTLE_DURATION * 1000 <= Date.now()
     : false;
@@ -64,14 +62,6 @@ export default function BattlePage() {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-16">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-12">
-          <Link href="/" className="text-2xl font-bold neon-text neon-cyan hover:opacity-80">
-            ← Retour
-          </Link>
-          <WalletConnect />
-        </div>
-
         <h1 className="text-6xl font-bold text-center mb-8 neon-text neon-cyan">
           BATTLE <span className="neon-pink">ARENA</span>
         </h1>
@@ -79,12 +69,12 @@ export default function BattlePage() {
         {!isConnected ? (
           <div className="glass-strong rounded-xl p-8 max-w-2xl mx-auto text-center">
             <p className="text-xl text-gray-300 mb-4">
-              Connectez votre wallet pour commencer une battle
+              Connect your wallet to start a battle
             </p>
           </div>
         ) : (
           <>
-            {/* Prix BTC actuel */}
+            {/* Current BTC Price */}
             {currentBTCPrice && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -92,13 +82,13 @@ export default function BattlePage() {
                 className="text-center mb-8"
               >
                 <div className="glass rounded-lg px-6 py-4 inline-block">
-                  <div className="text-sm text-gray-400 mb-1">Prix BTC/USD</div>
+                  <div className="text-sm text-gray-400 mb-1">BTC/USD Price</div>
                   <div className="text-3xl font-bold neon-cyan">${currentBTCPrice.toFixed(2)}</div>
                 </div>
               </motion.div>
             )}
 
-            {/* Battle en cours */}
+            {/* Active Battle */}
             {battle && battle.status === "active" && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -106,7 +96,7 @@ export default function BattlePage() {
                 className="max-w-4xl mx-auto mb-8"
               >
                 <div className="glass-strong rounded-xl p-8">
-                  <h2 className="text-2xl font-bold mb-6 neon-text">Battle en cours</h2>
+                  <h2 className="text-2xl font-bold mb-6 neon-text">Active Battle</h2>
                   
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="glass rounded-lg p-4">
@@ -121,15 +111,15 @@ export default function BattlePage() {
 
                   <div className="grid md:grid-cols-3 gap-4 mb-6">
                     <div className="glass rounded-lg p-4 text-center">
-                      <div className="text-sm text-gray-400 mb-1">Prix de départ</div>
+                      <div className="text-sm text-gray-400 mb-1">Start Price</div>
                       <div className="font-bold">${battle.startPrice?.toFixed(2)}</div>
                     </div>
                     <div className="glass rounded-lg p-4 text-center">
-                      <div className="text-sm text-gray-400 mb-1">Mise</div>
+                      <div className="text-sm text-gray-400 mb-1">Stake</div>
                       <div className="font-bold">{battle.stakeAmount} {battle.currency}</div>
                     </div>
                     <div className="glass rounded-lg p-4 text-center">
-                      <div className="text-sm text-gray-400 mb-1">Prix actuel</div>
+                      <div className="text-sm text-gray-400 mb-1">Current Price</div>
                       <div className="font-bold">${currentBTCPrice?.toFixed(2) || "..."}</div>
                     </div>
                   </div>
@@ -151,7 +141,7 @@ export default function BattlePage() {
                           disabled={isPending}
                           className="w-full mt-4 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {isPending ? "Résolution..." : "Résoudre la battle"}
+                          {isPending ? "Resolving..." : "Resolve Battle"}
                         </button>
                       )}
                     </div>
@@ -160,7 +150,7 @@ export default function BattlePage() {
               </motion.div>
             )}
 
-            {/* Interface de sélection Long/Short */}
+            {/* Position Selection Interface */}
             {(!battle || battle.status !== "active") && (
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -169,13 +159,13 @@ export default function BattlePage() {
               >
                 <div className="glass-strong rounded-xl p-8 mb-8 text-center">
                   <h2 className="text-3xl font-bold mb-4 neon-text">
-                    Choisissez votre <span className="neon-cyan">position</span>
+                    Choose your <span className="neon-cyan">position</span>
                   </h2>
                   <p className="text-gray-300 mb-4">
-                    Mise: <span className="font-bold neon-cyan">0.0015 {selectedCurrency}</span>
+                    Stake: <span className="font-bold neon-cyan">0.0015 {selectedCurrency}</span>
                   </p>
                   
-                  {/* Sélection devise */}
+                  {/* Currency Selection */}
                   <div className="mb-6 flex justify-center gap-4">
                     <button
                       onClick={() => setSelectedCurrency("ETH")}
@@ -200,7 +190,7 @@ export default function BattlePage() {
                   </div>
 
                   <p className="text-sm text-gray-400 mb-8">
-                    Vous serez automatiquement matché avec un adversaire opposé
+                    You will be automatically matched with an opposite opponent
                   </p>
 
                   <div className="grid md:grid-cols-2 gap-6">
@@ -214,14 +204,17 @@ export default function BattlePage() {
                       <div className="text-5xl mb-4">📈</div>
                       <h3 className="text-2xl font-bold neon-cyan mb-4">LONG</h3>
                       <p className="text-gray-300 mb-4">
-                        Vous pariez que le prix va monter
+                        You bet the price will go up
                       </p>
                       <button
                         disabled={isPending || selectedPosition === "long"}
                         className="w-full py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isPending && selectedPosition === "long" ? "En attente..." : "Entrer en Long"}
+                        {isPending && selectedPosition === "long" ? "Waiting..." : "Enter Long"}
                       </button>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        5% platform fee
+                      </p>
                     </motion.div>
 
                     {/* Short */}
@@ -234,21 +227,24 @@ export default function BattlePage() {
                       <div className="text-5xl mb-4">📉</div>
                       <h3 className="text-2xl font-bold neon-pink mb-4">SHORT</h3>
                       <p className="text-gray-300 mb-4">
-                        Vous pariez que le prix va descendre
+                        You bet the price will go down
                       </p>
                       <button
                         disabled={isPending || selectedPosition === "short"}
                         className="w-full py-3 bg-neon-pink text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-pink disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isPending && selectedPosition === "short" ? "En attente..." : "Entrer en Short"}
+                        {isPending && selectedPosition === "short" ? "Waiting..." : "Enter Short"}
                       </button>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        5% platform fee
+                      </p>
                     </motion.div>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {/* Historique des battles */}
+            {/* Battle History */}
             {battleHistory && battleHistory.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -256,7 +252,7 @@ export default function BattlePage() {
                 className="mt-12"
               >
                 <h2 className="text-3xl font-bold text-center mb-8 neon-text">
-                  Historique des <span className="neon-cyan">Battles</span>
+                  Battle <span className="neon-cyan">History</span>
                 </h2>
                 <div className="grid gap-6 max-w-4xl mx-auto">
                   {battleHistory.slice(0, 10).map((battleItem: any) => (
@@ -267,16 +263,16 @@ export default function BattlePage() {
                           <div className={`font-bold ${
                             battleItem.status === "resolved" ? "text-green-400" : "text-yellow-400"
                           }`}>
-                            {battleItem.status === "resolved" ? "Résolue" : "Active"}
+                            {battleItem.status === "resolved" ? "Resolved" : "Active"}
                           </div>
                         </div>
                         <div>
-                          <div className="text-sm text-gray-400 mb-1">Mise</div>
+                          <div className="text-sm text-gray-400 mb-1">Stake</div>
                           <div className="font-bold">{battleItem.stakeAmount} {battleItem.currency}</div>
                         </div>
                         {battleItem.winner && (
                           <div>
-                            <div className="text-sm text-gray-400 mb-1">Gagnant</div>
+                            <div className="text-sm text-gray-400 mb-1">Winner</div>
                             <div className="font-bold neon-cyan">{battleItem.winner.address}</div>
                           </div>
                         )}

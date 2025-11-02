@@ -11,7 +11,7 @@ export interface ITransaction extends Document {
   txHash?: string;
   status: 'pending' | 'completed' | 'failed';
   relatedBattleId?: Types.ObjectId;
-  feeAmount?: number; // For deposits, this is the 10% platform fee
+  feeAmount?: number; // For deposits, withdrawals, and stakes, this is the 5% platform fee
   createdAt: Date;
   updatedAt: Date;
 }
