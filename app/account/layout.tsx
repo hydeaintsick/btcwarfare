@@ -14,9 +14,17 @@ export default function AccountLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isConnected, user } = useWallet();
+  const { isConnected, isConnecting, user } = useWallet();
   const [balanceETH, setBalanceETH] = useState<number>(0);
   const [balanceUSDT, setBalanceUSDT] = useState<number>(0);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  // Marquer qu'on a vérifié l'auth une fois que le check est terminé
+  useEffect(() => {
+    if (!isConnecting) {
+      setHasCheckedAuth(true);
+    }
+  }, [isConnecting]);
 
   useEffect(() => {
     const refreshBalance = async () => {
@@ -44,7 +52,23 @@ export default function AccountLayout({
     }
   }, [pathname, router]);
 
-  if (!isConnected) {
+  // Afficher un loader pendant la vérification de l'auth
+  if (isConnecting || (!hasCheckedAuth && !isConnected)) {
+    return (
+      <main className="min-h-screen animated-gradient">
+        <div className="container mx-auto px-4 py-16">
+          <div className="glass-strong rounded-xl p-8 max-w-2xl mx-auto text-center">
+            <p className="text-xl text-gray-300 mb-4">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Afficher le message de connexion uniquement si on a vérifié et qu'on n'est pas connecté
+  if (!isConnected && hasCheckedAuth) {
     return (
       <main className="min-h-screen animated-gradient">
         <div className="container mx-auto px-4 py-16">

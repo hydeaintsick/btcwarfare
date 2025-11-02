@@ -16,15 +16,7 @@ export function useWallet() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Vérifier si l'utilisateur est déjà connecté au chargement
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      // Vérifier le token et récupérer les infos utilisateur
-      checkAuth();
-    }
-  }, []);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const checkAuth = async () => {
     try {
@@ -38,8 +30,26 @@ export function useWallet() {
       apiClient.setToken(null);
       setIsConnected(false);
       setUser(null);
+    } finally {
+      setIsCheckingAuth(false);
     }
   };
+
+  // Vérifier si l'utilisateur est déjà connecté au chargement
+  useEffect(() => {
+    const checkInitialAuth = async () => {
+      setIsCheckingAuth(true);
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        // Vérifier le token et récupérer les infos utilisateur
+        await checkAuth();
+      } else {
+        setIsCheckingAuth(false);
+      }
+    };
+    checkInitialAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const connect = async () => {
     try {
@@ -101,13 +111,62 @@ export function useWallet() {
     localStorage.removeItem('auth_token');
   };
 
+  const sendTransaction = async (
+    to: string,
+    amount: number,
+    currency: 'ETH' | 'USDT' = 'ETH'
+  ): Promise<{ hash: string; receipt?: any }> => {
+    try {
+      if (!window.ethereum) {
+        throw new Error('MetaMask is not installed');
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      if (currency === 'ETH') {
+        // Transaction ETH native
+        const tx = await signer.sendTransaction({
+          to,
+          value: ethers.parseEther(amount.toString()),
+        });
+
+        // Attendre la confirmation (optionnel, on peut aussi juste retourner le hash)
+        const receipt = await tx.wait();
+        return { hash: tx.hash, receipt };
+      } else {
+        // Transaction USDT (ERC20)
+        // ABI minimal pour transfer
+        const erc20Abi = [
+          'function transfer(address to, uint256 amount) external returns (bool)',
+        ];
+
+        // Adresse du contrat USDT (mainnet)
+        const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+        
+        const contract = new ethers.Contract(USDT_ADDRESS, erc20Abi, signer);
+        
+        // USDT a 6 décimales
+        const amountWei = ethers.parseUnits(amount.toString(), 6);
+        
+        const tx = await contract.transfer(to, amountWei);
+        const receipt = await tx.wait();
+        
+        return { hash: tx.hash, receipt };
+      }
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to send transaction');
+    }
+  };
+
   return {
     user,
     isConnected,
-    isConnecting,
+    isConnecting: isConnecting || isCheckingAuth,
     error,
     connect,
     disconnect,
+    sendTransaction,
     address: user?.walletAddress || null,
   };
 }

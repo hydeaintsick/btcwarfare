@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { apiClient } from "@/lib/api";
 import { useWallet } from "@/hooks/useWallet";
 
@@ -20,12 +21,30 @@ export default function BalancePage() {
   const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
   const [txHash, setTxHash] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [pendingDeposits, setPendingDeposits] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       loadDepositAddress();
+      loadPendingDeposits();
+      
+      // Rafraîchir les dépôts en attente toutes les 5 secondes
+      const interval = setInterval(() => {
+        loadPendingDeposits();
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
   }, [user]);
+
+  const loadPendingDeposits = async () => {
+    try {
+      const data = await apiClient.getPendingDeposits();
+      setPendingDeposits(data.deposits);
+    } catch (error) {
+      console.error("Error loading pending deposits:", error);
+    }
+  };
 
   const loadDepositAddress = async () => {
     try {
@@ -60,6 +79,9 @@ export default function BalancePage() {
         const balanceData = await apiClient.getBalance();
         setBalanceETH(balanceData.balanceETH);
         setBalanceUSDT(balanceData.balanceUSDT);
+        
+        // Refresh pending deposits
+        loadPendingDeposits();
       }
     } catch (error: any) {
       alert(error.message || "Error checking deposit");
@@ -69,8 +91,16 @@ export default function BalancePage() {
   };
 
   return (
-    <>
-      <h2 className="text-3xl font-bold mb-6 neon-text">Balance & Top-up</h2>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-3xl font-bold neon-text">Balance & Top-up</h2>
+        <Link
+          href="/account/topup"
+          className="px-6 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan"
+        >
+          Top-up Now
+        </Link>
+      </div>
 
       {/* Balance Cards */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -81,6 +111,7 @@ export default function BalancePage() {
         >
           <div className="text-sm text-gray-400 mb-2">ETH Balance</div>
           <div className="text-4xl font-bold neon-cyan">{balanceETH.toFixed(6)} ETH</div>
+          <div className="text-xs text-gray-500 mt-2">Total (deposits + winnings/losses)</div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -89,6 +120,7 @@ export default function BalancePage() {
         >
           <div className="text-sm text-gray-400 mb-2">USDT Balance</div>
           <div className="text-4xl font-bold neon-pink">{balanceUSDT.toFixed(2)} USDT</div>
+          <div className="text-xs text-gray-500 mt-2">Total (deposits + winnings/losses)</div>
         </motion.div>
       </div>
 
@@ -160,8 +192,69 @@ export default function BalancePage() {
             </button>
           </div>
         </div>
+
+        {/* Pending Deposits */}
+        {pendingDeposits.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-xl font-bold mb-4 neon-text">Recent Deposits</h3>
+            <div className="space-y-3">
+              {pendingDeposits.map((deposit) => (
+                <motion.div
+                  key={deposit.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass rounded-lg p-4 flex items-center justify-between"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        deposit.status === 'completed' 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : deposit.status === 'pending'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {deposit.status === 'completed' ? '✓ Completed' : 
+                         deposit.status === 'pending' ? '⏳ Pending' : 
+                         '✗ Failed'}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        {new Date(deposit.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {deposit.txHash && (
+                      <code className="text-xs text-gray-400 font-mono break-all">
+                        {deposit.txHash.slice(0, 20)}...{deposit.txHash.slice(-10)}
+                      </code>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-lg font-bold ${
+                      deposit.currency === 'ETH' ? 'neon-cyan' : 'neon-pink'
+                    }`}>
+                      +{deposit.amount.toFixed(6)} {deposit.currency}
+                    </div>
+                    {deposit.fee && (
+                      <div className="text-xs text-gray-400">
+                        Fee: {deposit.fee.toFixed(6)} {deposit.currency}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Auto-Detection Info */}
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-sm text-blue-300">
+            💡 <strong>Auto-Detection Enabled:</strong> Your deposits are automatically detected and credited to your account within 30 seconds. 
+            You can also manually check a transaction using the form above.
+          </p>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

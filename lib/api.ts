@@ -109,6 +109,21 @@ class ApiClient {
     }>('/wallet/deposits');
   }
 
+  async getPendingDeposits() {
+    return this.request<{
+      deposits: Array<{
+        id: string;
+        txHash?: string;
+        amount: number;
+        currency: string;
+        fee?: number;
+        status: string;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>('/wallet/pending-deposits');
+  }
+
   async withdraw(amount: number, currency: 'ETH' | 'USDT', destinationAddress: string) {
     return this.request<{
       message: string;
@@ -168,6 +183,33 @@ class ApiClient {
   async resolveBattle(battleId: string) {
     return this.request<{ message: string; battle: any }>(`/battle/resolve/${battleId}`, {
       method: 'POST',
+    });
+  }
+
+  // Topup
+  async initiateTopup(amount: number, currency: 'ETH' | 'USDT') {
+    return this.request<{
+      depositAddress: string;
+      amount: number;
+      currency: string;
+      fee: number;
+      amountAfterFee: number;
+    }>('/wallet/initiate-topup', {
+      method: 'POST',
+      body: JSON.stringify({ amount, currency }),
+    });
+  }
+
+  async watchTopupTransaction(txHash: string, currency: 'ETH' | 'USDT') {
+    return this.request<{
+      status: 'pending' | 'confirmed' | 'failed';
+      amount?: number;
+      fee?: number;
+      amountAfterFee?: number;
+      newBalance?: number;
+    }>('/wallet/watch-topup', {
+      method: 'POST',
+      body: JSON.stringify({ txHash, currency }),
     });
   }
 }

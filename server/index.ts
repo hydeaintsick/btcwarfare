@@ -7,6 +7,7 @@ import btcRoutes from './routes/btc';
 import walletRoutes from './routes/wallet';
 import battleRoutes from './routes/battle';
 import { startBattleResolver } from './workers/battleResolver';
+import { startDepositMonitor } from './workers/depositMonitor';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,7 @@ const startServer = async () => {
 
     // Start background workers
     startBattleResolver();
+    startDepositMonitor();
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

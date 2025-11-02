@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import blockchainService from '../services/blockchainService';
+import depositService from '../services/depositService';
 
 const router = express.Router();
 
@@ -89,70 +90,31 @@ router.post('/check-deposit', async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Vérifier la transaction sur la blockchain
-    const result = await blockchainService.checkDeposit(
+    // Utiliser le service de dépôt pour vérifier et traiter
+    const result = await depositService.checkTransactionForUser(
+      user._id.toString(),
       txHash,
-      user.walletAddress,
       currency
     );
 
-    if (!result.confirmed) {
-      res.status(400).json({ error: 'Transaction not found or not confirmed' });
+    if (!result.found) {
+      res.status(400).json({ error: result.message || 'Transaction not found or invalid' });
       return;
     }
 
-    if (!result.isDeposit || !result.amount) {
-      res.json({
-        status: 'failed',
-        message: 'Transaction is not a valid deposit to platform address',
-      });
-      return;
-    }
-
-    // Calculer les montants avec 5% de frais
-    const platformFee = result.amount * 0.05;
-    const userAmount = result.amount * 0.95;
-
-    // Créer la transaction en DB
-    const transaction = await Transaction.create({
-      userId: user._id,
-      type: 'deposit',
-      amount: userAmount, // Montant crédité à l'utilisateur
-      currency,
-      txHash,
-      status: 'pending',
-      feeAmount: platformFee,
-    });
-
-    // Créer aussi la transaction pour la commission plateforme
-    await Transaction.create({
-      userId: user._id,
-      type: 'fee',
-      amount: platformFee,
-      currency,
-      txHash,
-      status: 'completed',
-    });
-
-    // Mettre à jour le balance de l'utilisateur
-    if (currency === 'ETH') {
-      user.balanceETH += userAmount;
-    } else {
-      user.balanceUSDT += userAmount;
-    }
-    await user.save();
-
-    // Marquer la transaction comme complétée
-    transaction.status = 'completed';
-    await transaction.save();
+    // Récupérer la transaction créée pour obtenir les détails complets
+    const transaction = await Transaction.findOne({ txHash, userId: user._id });
+    const updatedUser = await User.findById(user._id);
 
     res.json({
-      status: 'completed',
-      amount: userAmount,
-      fee: platformFee,
-      total: result.amount,
+      status: result.status || 'completed',
+      amount: result.amount || transaction?.amount || 0,
+      fee: transaction?.feeAmount || 0,
+      total: (result.amount || 0) + (transaction?.feeAmount || 0),
       currency,
-      newBalance: currency === 'ETH' ? user.balanceETH : user.balanceUSDT,
+      newBalance: currency === 'ETH' 
+        ? (updatedUser?.balanceETH || user.balanceETH)
+        : (updatedUser?.balanceUSDT || user.balanceUSDT),
     });
   } catch (error) {
     console.error('Check deposit error:', error);
@@ -280,6 +242,41 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
 });
 
 /**
+ * GET /api/wallet/pending-deposits
+ * Récupère les dépôts en attente de l'utilisateur (pour monitoring)
+ */
+router.get('/pending-deposits', async (req: AuthRequest, res: Response) => {
+  try {
+    // Récupérer les transactions de dépôt en attente ou récentes (dernières 24h)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const pendingTransactions = await Transaction.find({
+      userId: req.userId,
+      type: 'deposit',
+      createdAt: { $gte: oneDayAgo },
+    })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.json({
+      deposits: pendingTransactions.map((tx) => ({
+        id: tx._id,
+        txHash: tx.txHash,
+        amount: tx.amount,
+        currency: tx.currency,
+        fee: tx.feeAmount,
+        status: tx.status,
+        createdAt: tx.createdAt,
+        updatedAt: tx.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Pending deposits error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/wallet/transactions
  * Historique complet des transactions de l'utilisateur
  */
@@ -309,6 +306,166 @@ router.get('/transactions', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Transactions history error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/wallet/initiate-topup
+ * Initialise un topup (retourne l'adresse de dépôt et les détails)
+ * SÉCURITÉ: Valide seulement le montant, ne crédite rien
+ */
+router.post('/initiate-topup', async (req: AuthRequest, res: Response) => {
+  try {
+    const { amount, currency } = req.body;
+
+    // VALIDATION: Vérifier les paramètres
+    if (!amount || !currency || !['ETH', 'USDT'].includes(currency)) {
+      res.status(400).json({ error: 'Missing or invalid amount or currency' });
+      return;
+    }
+
+    if (amount <= 0 || amount > 1000) {
+      res.status(400).json({ error: 'Amount must be between 0 and 1000' });
+      return;
+    }
+
+    // VALIDATION: Vérifier que l'utilisateur existe
+    const user = await User.findById(req.userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Récupérer l'adresse de dépôt
+    const depositAddress = blockchainService.getDepositAddress();
+    
+    // Calculer les frais et montant après frais
+    const fee = amount * 0.05;
+    const amountAfterFee = amount * (1 - 0.05);
+
+    // Log pour audit
+    console.log(`[SECURITY] Topup initiated: userId=${req.userId}, amount=${amount} ${currency}`);
+
+    res.json({
+      depositAddress,
+      amount,
+      currency,
+      fee,
+      amountAfterFee,
+    });
+  } catch (error: any) {
+    console.error('Initiate topup error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/wallet/watch-topup
+ * Suit le statut d'une transaction de topup
+ * SÉCURITÉ: Vérifie la blockchain OBLIGATOIREMENT avant crédit
+ */
+router.post('/watch-topup', async (req: AuthRequest, res: Response) => {
+  try {
+    const { txHash, currency } = req.body;
+
+    // VALIDATION: Vérifier les paramètres
+    if (!txHash || !currency || !['ETH', 'USDT'].includes(currency)) {
+      res.status(400).json({ error: 'Missing or invalid txHash or currency' });
+      return;
+    }
+
+    // VALIDATION: Vérifier que l'utilisateur existe et correspond
+    const user = await User.findById(req.userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // VALIDATION: Vérifier si la transaction existe déjà
+    const existingTx = await Transaction.findOne({ txHash, userId: req.userId });
+    if (existingTx) {
+      // Transaction déjà traitée
+      const updatedUser = await User.findById(req.userId);
+      res.json({
+        status: existingTx.status === 'completed' ? 'confirmed' : existingTx.status,
+        amount: existingTx.amount + (existingTx.feeAmount || 0), // Montant brut
+        fee: existingTx.feeAmount || 0,
+        amountAfterFee: existingTx.amount,
+        newBalance: currency === 'ETH' 
+          ? (updatedUser?.balanceETH || user.balanceETH)
+          : (updatedUser?.balanceUSDT || user.balanceUSDT),
+      });
+      return;
+    }
+
+    // SÉCURITÉ CRITIQUE: Utiliser checkTransactionForUser qui fait TOUTES les validations
+    const result = await depositService.checkTransactionForUser(
+      req.userId,
+      txHash,
+      currency
+    );
+
+    if (!result.found) {
+      // Transaction pas encore trouvée ou pas validée
+      // Vérifier rapidement sur la blockchain si elle existe
+      try {
+        const blockchainCheck = await blockchainService.checkDeposit(
+          txHash,
+          user.walletAddress,
+          currency
+        );
+
+        if (!blockchainCheck.confirmed) {
+          res.json({
+            status: 'pending',
+            message: 'Transaction not yet confirmed on blockchain',
+          });
+          return;
+        }
+
+        if (!blockchainCheck.isDeposit) {
+          res.status(400).json({
+            status: 'failed',
+            error: 'Transaction is not a valid deposit to platform address',
+          });
+          return;
+        }
+      } catch (error) {
+        // Erreur de vérification blockchain - transaction peut être en attente
+        res.json({
+          status: 'pending',
+          message: 'Waiting for blockchain confirmation',
+        });
+        return;
+      }
+
+      // Si on arrive ici, la transaction est confirmée mais pas encore traitée
+      // Le checkTransactionForUser devrait l'avoir traitée, mais si ce n'est pas le cas, on attend
+      res.json({
+        status: 'pending',
+        message: 'Transaction confirmed, processing...',
+      });
+      return;
+    }
+
+    // Transaction trouvée et traitée
+    const updatedUser = await User.findById(req.userId);
+
+    res.json({
+      status: result.status === 'completed' ? 'confirmed' : result.status,
+      amount: result.amount || 0,
+      fee: result.fee || 0,
+      amountAfterFee: result.amountAfterFee || 0,
+      newBalance: currency === 'ETH' 
+        ? (updatedUser?.balanceETH || user.balanceETH)
+        : (updatedUser?.balanceUSDT || user.balanceUSDT),
+    });
+  } catch (error: any) {
+    console.error('Watch topup error:', error);
+    res.status(500).json({ 
+      status: 'failed',
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
