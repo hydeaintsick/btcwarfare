@@ -54,7 +54,7 @@ export default function SupportPage() {
                     <h4 className="font-bold text-white mb-1">Can't enter a battle?</h4>
                     <p className="text-sm">
                       Check that you have enough balance (stake amount + 5% fee). You need at least 0.001575 ETH 
-                      or equivalent USDT to enter the MVP room (stake of 0.0015 + 5% fee).
+                      to enter the MVP room (stake of 0.0015 + 5% fee).
                     </p>
                   </div>
                   <div>

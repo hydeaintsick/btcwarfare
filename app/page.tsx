@@ -6,15 +6,21 @@ import { useWallet } from "@/hooks/useWallet";
 
 export default function Home() {
   const { isConnected } = useWallet();
-  const currencySymbol = "ETH"; // ETH or USDT depending on user choice
+  const currencySymbol = "ETH"; // Platform 100% ETH
 
   return (
     <main className="min-h-screen animated-gradient relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-96 h-96 bg-neon-cyan opacity-10 rounded-full blur-3xl animate-pulse-neon" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-neon-pink opacity-10 rounded-full blur-3xl animate-pulse-neon" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-neon-purple opacity-10 rounded-full blur-3xl animate-pulse-neon" style={{ animationDelay: "2s" }} />
+        <div
+          className="absolute bottom-20 right-20 w-96 h-96 bg-neon-pink opacity-10 rounded-full blur-3xl animate-pulse-neon"
+          style={{ animationDelay: "1s" }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 w-96 h-96 bg-neon-purple opacity-10 rounded-full blur-3xl animate-pulse-neon"
+          style={{ animationDelay: "2s" }}
+        />
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-16">
@@ -32,10 +38,7 @@ export default function Home() {
             Battle P2P Crypto - Bet on Bitcoin trend and face other players
           </p>
           {isConnected ? (
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
                 href="/battle"
                 className="inline-block px-8 py-4 bg-neon-cyan text-black font-bold rounded-lg glow-cyan hover:bg-opacity-90 transition-all"
@@ -71,7 +74,9 @@ export default function Home() {
                 MVP
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold neon-cyan mb-4">0.0015 {currencySymbol}</div>
+                <div className="text-3xl font-bold neon-cyan mb-4">
+                  0.0015 {currencySymbol}
+                </div>
                 <div className="text-gray-300 mb-6">
                   <div className="text-sm opacity-75">Starting stake</div>
                   <div className="text-lg mt-2">~$3.50</div>
@@ -103,7 +108,9 @@ export default function Home() {
                 Soon
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-400 mb-4">0.0030 {currencySymbol}</div>
+                <div className="text-3xl font-bold text-gray-400 mb-4">
+                  0.0030 {currencySymbol}
+                </div>
                 <div className="text-gray-500 mb-6">
                   <div className="text-sm opacity-75">Starting stake</div>
                   <div className="text-lg mt-2">~$7.00</div>
@@ -126,7 +133,9 @@ export default function Home() {
                 Soon
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-400 mb-4">0.015 {currencySymbol}</div>
+                <div className="text-3xl font-bold text-gray-400 mb-4">
+                  0.015 {currencySymbol}
+                </div>
                 <div className="text-gray-500 mb-6">
                   <div className="text-sm opacity-75">Starting stake</div>
                   <div className="text-lg mt-2">~$35.00</div>
@@ -156,15 +165,17 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-6">
             <div className="glass rounded-xl p-6 text-center">
               <div className="text-5xl mb-4">1️⃣</div>
-              <h3 className="text-xl font-bold neon-cyan mb-3">Choose your side</h3>
-              <p className="text-gray-300">
-                Long or Short on Bitcoin
-              </p>
+              <h3 className="text-xl font-bold neon-cyan mb-3">
+                Choose your side
+              </h3>
+              <p className="text-gray-300">Long or Short on Bitcoin</p>
             </div>
 
             <div className="glass rounded-xl p-6 text-center">
               <div className="text-5xl mb-4">2️⃣</div>
-              <h3 className="text-xl font-bold neon-pink mb-3">Face an opponent</h3>
+              <h3 className="text-xl font-bold neon-pink mb-3">
+                Face an opponent
+              </h3>
               <p className="text-gray-300">
                 Automatic match with an opposite player
               </p>
@@ -172,9 +183,12 @@ export default function Home() {
 
             <div className="glass rounded-xl p-6 text-center">
               <div className="text-5xl mb-4">3️⃣</div>
-              <h3 className="text-xl font-bold neon-purple mb-3">Win the stake</h3>
+              <h3 className="text-xl font-bold neon-purple mb-3">
+                Win the stake
+              </h3>
               <p className="text-gray-300">
-                60 seconds later, the winner takes 100% of the stake (fees already deducted)
+                60 seconds later, the winner takes 100% of the stake (fees
+                already deducted)
               </p>
             </div>
           </div>

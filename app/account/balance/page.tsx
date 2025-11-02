@@ -9,16 +9,14 @@ import { useWallet } from "@/hooks/useWallet";
 export default function BalancePage() {
   const { user } = useWallet();
   const [balanceETH, setBalanceETH] = useState<number>(0);
-  const [balanceUSDT, setBalanceUSDT] = useState<number>(0);
 
   useEffect(() => {
     if (user) {
       setBalanceETH(user.balanceETH);
-      setBalanceUSDT(user.balanceUSDT);
     }
   }, [user]);
   const [depositAddress, setDepositAddress] = useState<string>("");
-  const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
+  const selectedCurrency = "ETH" as const; // Plateforme 100% ETH
   const [txHash, setTxHash] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [pendingDeposits, setPendingDeposits] = useState<any[]>([]);
@@ -70,15 +68,10 @@ export default function BalancePage() {
       if (result.status === "completed" && result.newBalance !== undefined) {
         setTxHash("");
         // Refresh balance from result
-        if (selectedCurrency === "ETH") {
-          setBalanceETH(result.newBalance);
-        } else {
-          setBalanceUSDT(result.newBalance);
-        }
+        setBalanceETH(result.newBalance);
         // Also refresh user data
         const balanceData = await apiClient.getBalance();
         setBalanceETH(balanceData.balanceETH);
-        setBalanceUSDT(balanceData.balanceUSDT);
         
         // Refresh pending deposits
         loadPendingDeposits();
@@ -102,56 +95,21 @@ export default function BalancePage() {
         </Link>
       </div>
 
-      {/* Balance Cards */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      {/* Balance Card */}
+      <div className="mb-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-6 max-w-md"
         >
           <div className="text-sm text-gray-400 mb-2">ETH Balance</div>
           <div className="text-4xl font-bold neon-cyan">{balanceETH.toFixed(6)} ETH</div>
-          <div className="text-xs text-gray-500 mt-2">Total (deposits + winnings/losses)</div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="glass rounded-xl p-6"
-        >
-          <div className="text-sm text-gray-400 mb-2">USDT Balance</div>
-          <div className="text-4xl font-bold neon-pink">{balanceUSDT.toFixed(2)} USDT</div>
           <div className="text-xs text-gray-500 mt-2">Total (deposits + winnings/losses)</div>
         </motion.div>
       </div>
 
       {/* Top-up Section */}
       <div className="space-y-6">
-        <div>
-          <label className="block text-sm text-gray-400 mb-2">Currency</label>
-          <div className="flex gap-4">
-            <button
-              onClick={() => setSelectedCurrency("ETH")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCurrency === "ETH"
-                  ? "bg-neon-cyan text-black"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              ETH
-            </button>
-            <button
-              onClick={() => setSelectedCurrency("USDT")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCurrency === "USDT"
-                  ? "bg-neon-cyan text-black"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              USDT
-            </button>
-          </div>
-        </div>
-
         <div>
           <label className="block text-sm text-gray-400 mb-2">Deposit Address</label>
           <div className="glass rounded-lg p-4 flex items-center justify-between">

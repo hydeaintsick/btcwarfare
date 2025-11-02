@@ -7,13 +7,13 @@ import { useWallet } from "@/hooks/useWallet";
 
 export default function WithdrawPage() {
   const { user } = useWallet();
-  const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
+  const selectedCurrency = "ETH" as const; // Plateforme 100% ETH
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [withdrawAddress, setWithdrawAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const handleWithdraw = async () => {
-    if (!withdrawAmount || !withdrawAddress || !selectedCurrency) {
+    if (!withdrawAmount || !withdrawAddress) {
       alert("Please fill all fields");
       return;
     }
@@ -37,7 +37,7 @@ export default function WithdrawPage() {
     }
   };
 
-  const balance = selectedCurrency === "ETH" ? user?.balanceETH || 0 : user?.balanceUSDT || 0;
+  const balance = user?.balanceETH || 0;
   const withdrawalFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.05 : 0;
   const totalRequired = withdrawAmount ? parseFloat(withdrawAmount) + withdrawalFee : 0;
 
@@ -47,31 +47,8 @@ export default function WithdrawPage() {
 
       <div className="space-y-6">
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Currency</label>
-          <div className="flex gap-4">
-            <button
-              onClick={() => setSelectedCurrency("ETH")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCurrency === "ETH"
-                  ? "bg-neon-cyan text-black"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              ETH
-            </button>
-            <button
-              onClick={() => setSelectedCurrency("USDT")}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCurrency === "USDT"
-                  ? "bg-neon-cyan text-black"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              USDT
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            Available: {balance.toFixed(6)} {selectedCurrency}
+          <p className="text-sm text-gray-400 mb-4">
+            Available: {balance.toFixed(6)} ETH
           </p>
         </div>
 

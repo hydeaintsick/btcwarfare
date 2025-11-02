@@ -52,7 +52,7 @@ export default function TopupPage() {
     if (txHash && (txStatus === "blockchainPending" || txStatus === "metaMaskPending")) {
       const interval = setInterval(() => {
         checkTransactionStatus();
-      }, 2000); // Polling toutes les 2 secondes pour un feedback plus rapide
+      }, 10000); // Polling toutes les 10 secondes pour éviter de surcharger le RPC
 
       return () => clearInterval(interval);
     }
@@ -272,7 +272,7 @@ export default function TopupPage() {
                 </div>
                 <div className="flex items-center justify-between mt-3">
                   <p className="text-sm text-gray-300">
-                    Checking blockchain every 2 seconds...
+                    Checking blockchain every 10 seconds...
                   </p>
                   <div className="text-xs text-yellow-400 font-mono">
                     Checks: {blockConfirmationCount}

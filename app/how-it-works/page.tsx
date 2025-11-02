@@ -29,7 +29,7 @@ export default function HowItWorksPage() {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-4 neon-text">Top-up Your Account</h2>
                 <p className="text-gray-300 mb-4">
-                  Deposit ETH or USDT to your account. Send crypto to the platform deposit address shown in your account page.
+                  Deposit ETH to your account. Send crypto to the platform deposit address shown in your account page.
                 </p>
                 <p className="text-yellow-400 text-sm mb-2">
                   ⚠️ Platform fee: <strong>5%</strong> on all deposits

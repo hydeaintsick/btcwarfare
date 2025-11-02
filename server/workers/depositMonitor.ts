@@ -1,20 +1,12 @@
 import cron from 'node-cron';
-import depositService from '../services/depositService';
 
 /**
  * Worker pour détecter automatiquement les dépôts entrants
- * Exécuté toutes les 30 secondes
+ * DÉSACTIVÉ: Les dépôts sont vérifiés manuellement par les utilisateurs via checkTransactionForUser
+ * pour éviter de surcharger les RPC gratuits avec des scans continus
  */
 export const startDepositMonitor = (): void => {
-  // Scanner les dépôts toutes les 30 secondes
-  cron.schedule('*/30 * * * * *', async () => {
-    try {
-      await depositService.scanDeposits();
-    } catch (error) {
-      console.error('Deposit monitor cron error:', error);
-    }
-  });
-
-  console.log('✅ Deposit monitor worker started');
+  // Worker désactivé - les dépôts sont vérifiés à la demande par les utilisateurs
+  console.log('⚠️  Automatic deposit monitor is DISABLED. Users must manually check transactions.');
 };
 
