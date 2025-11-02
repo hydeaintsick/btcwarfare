@@ -131,9 +131,10 @@ export function useWallet() {
           value: ethers.parseEther(amount.toString()),
         });
 
-        // Attendre la confirmation (optionnel, on peut aussi juste retourner le hash)
-        const receipt = await tx.wait();
-        return { hash: tx.hash, receipt };
+        // Retourner le hash immédiatement - MetaMask a déjà confirmé l'envoi
+        // La confirmation blockchain se fera via polling côté frontend
+        // Note: tx.hash est disponible immédiatement après sendTransaction
+        return { hash: tx.hash, receipt: null };
       } else {
         // Transaction USDT (ERC20)
         // ABI minimal pour transfer

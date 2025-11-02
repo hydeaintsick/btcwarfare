@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import platformConfigService from './platformConfigService';
 
 // Adresses des contrats USDT (Ethereum Mainnet)
 const USDT_CONTRACT_ADDRESS_MAINNET = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
@@ -8,39 +9,106 @@ class BlockchainService {
   private provider: ethers.JsonRpcProvider | null = null;
   private depositWallet: ethers.Wallet | null = null;
   private platformAddress: string = '';
+  private addressCache: string | null = null;
+  private addressCacheExpiry: number = 0;
+  private readonly CACHE_TTL = 30000; // 30 secondes
 
   constructor() {
-    // Initialiser avec les variables d'environnement
+    // Ne pas initialiser ici - attendre que dotenv soit chargé
+    // L'initialisation se fera à la demande via ensureProvider()
+  }
+
+  /**
+   * S'assure que le provider est initialisé
+   */
+  private ensureProvider(): void {
+    if (this.provider) {
+      return; // Déjà initialisé
+    }
+
     const rpcUrl = process.env.RPC_URL || process.env.ETH_RPC_URL;
-    if (rpcUrl) {
-      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    if (!rpcUrl) {
+      console.error('❌ ERROR: RPC_URL or ETH_RPC_URL not configured. Blockchain operations will fail.');
+      console.error('   Please set RPC_URL or ETH_RPC_URL in your .env file');
+      throw new Error('Provider not configured. Please set RPC_URL or ETH_RPC_URL in environment variables.');
+    }
+
+    try {
+      this.provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+        batchMaxCount: 1,
+        staticNetwork: true,
+      });
+      console.log(`✅ Blockchain provider created with RPC: ${rpcUrl.substring(0, 50)}...`);
       
-      // Créer un wallet pour la plateforme (pour recevoir les dépôts)
+      // Créer un wallet pour la plateforme si PLATFORM_PRIVATE_KEY est fourni (fallback)
       const privateKey = process.env.PLATFORM_PRIVATE_KEY;
       if (privateKey) {
         this.depositWallet = new ethers.Wallet(privateKey, this.provider);
         this.platformAddress = this.depositWallet.address;
+        console.log(`✅ Platform wallet initialized: ${this.platformAddress.substring(0, 10)}...`);
       }
+    } catch (error: any) {
+      console.error('❌ Error initializing blockchain provider:', error.message || error);
+      throw new Error(`Failed to initialize blockchain provider: ${error.message || error}`);
     }
   }
 
   /**
-   * Retourne l'adresse de dépôt de la plateforme
+   * Retourne l'adresse de dépôt de la plateforme depuis la DB
    */
-  getDepositAddress(): string {
-    if (!this.platformAddress) {
-      // Si le wallet n'est pas configuré, générer une adresse de placeholder
-      // (Pour le développement uniquement - en production, cela doit être configuré)
-      if (process.env.NODE_ENV === 'development') {
-        // Générer une adresse factice pour le développement
-        const randomWallet = ethers.Wallet.createRandom();
-        this.platformAddress = randomWallet.address;
-        console.warn('⚠️  WARNING: Using random deposit address for development. Set PLATFORM_PRIVATE_KEY in production!');
-        return this.platformAddress;
-      }
-      throw new Error('Platform wallet not configured. Please set PLATFORM_PRIVATE_KEY in environment variables.');
+  async getDepositAddress(): Promise<string> {
+    // Vérifier le cache
+    if (this.addressCache && Date.now() < this.addressCacheExpiry) {
+      return this.addressCache;
     }
-    return this.platformAddress;
+
+    try {
+      // Essayer de récupérer depuis la DB
+      const dbAddress = await platformConfigService.getConfig('DEPOSIT_ADDRESS');
+      
+      if (dbAddress) {
+        this.addressCache = dbAddress.toLowerCase();
+        this.addressCacheExpiry = Date.now() + this.CACHE_TTL;
+        return this.addressCache;
+      }
+
+      // Fallback sur l'adresse depuis PLATFORM_PRIVATE_KEY si disponible
+      if (this.platformAddress) {
+        this.addressCache = this.platformAddress.toLowerCase();
+        this.addressCacheExpiry = Date.now() + this.CACHE_TTL;
+        return this.addressCache;
+      }
+
+      // Si rien n'est configuré, utiliser une adresse par défaut
+      const defaultAddress = '0x8af5e8943ffc8dbf373f20df191687156ce185e9';
+      console.warn('⚠️  WARNING: Using default deposit address (not in DB)');
+      this.addressCache = defaultAddress.toLowerCase();
+      this.addressCacheExpiry = Date.now() + this.CACHE_TTL;
+      return this.addressCache;
+    } catch (error: any) {
+      console.error('Error getting deposit address:', error);
+      
+      // En cas d'erreur DB, retourner l'adresse par défaut
+      const defaultAddress = '0x8af5e8943ffc8dbf373f20df191687156ce185e9';
+      return defaultAddress.toLowerCase();
+    }
+  }
+
+  /**
+   * Version synchrone pour compatibilité (avec cache)
+   * NOTE: Préférer utiliser getDepositAddress() async si possible
+   */
+  getDepositAddressSync(): string {
+    if (this.addressCache && Date.now() < this.addressCacheExpiry) {
+      return this.addressCache;
+    }
+
+    if (this.platformAddress) {
+      return this.platformAddress.toLowerCase();
+    }
+
+    // Fallback
+    return '0x8af5e8943ffc8dbf373f20df191687156ce185e9'.toLowerCase();
   }
 
   /**
@@ -51,8 +119,15 @@ class BlockchainService {
     amount?: number;
     confirmed: boolean;
   }> {
+    try {
+      this.ensureProvider();
+    } catch (error: any) {
+      console.error('[checkETHDeposit] Provider initialization failed:', error.message);
+      throw error;
+    }
+    
     if (!this.provider) {
-      throw new Error('Provider not configured');
+      throw new Error('Provider not configured. Please set RPC_URL or ETH_RPC_URL in environment variables.');
     }
 
     try {
@@ -66,8 +141,11 @@ class BlockchainService {
         return { isDeposit: false, confirmed: false };
       }
 
+      // Récupérer l'adresse de dépôt actuelle
+      const depositAddress = await this.getDepositAddress();
+
       // Vérifier que la transaction va vers l'adresse de dépôt
-      if (receipt.to?.toLowerCase() !== this.platformAddress.toLowerCase()) {
+      if (receipt.to?.toLowerCase() !== depositAddress.toLowerCase()) {
         return { isDeposit: false, confirmed: true };
       }
 
@@ -98,8 +176,15 @@ class BlockchainService {
     amount?: number;
     confirmed: boolean;
   }> {
+    try {
+      this.ensureProvider();
+    } catch (error: any) {
+      console.error('[checkUSDTDeposit] Provider initialization failed:', error.message);
+      throw error;
+    }
+    
     if (!this.provider) {
-      throw new Error('Provider not configured');
+      throw new Error('Provider not configured. Please set RPC_URL or ETH_RPC_URL in environment variables.');
     }
 
     try {
@@ -139,9 +224,12 @@ class BlockchainService {
         const to = event.args[1].toLowerCase();
         const value = event.args[2];
 
+        // Récupérer l'adresse de dépôt actuelle
+        const depositAddress = await this.getDepositAddress();
+
         // Vérifier que c'est un transfer vers la plateforme
         if (
-          to === this.platformAddress.toLowerCase() &&
+          to === depositAddress.toLowerCase() &&
           from === userAddress.toLowerCase()
         ) {
           // USDT a 6 décimales

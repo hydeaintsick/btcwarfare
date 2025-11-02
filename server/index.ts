@@ -8,6 +8,8 @@ import walletRoutes from './routes/wallet';
 import battleRoutes from './routes/battle';
 import { startBattleResolver } from './workers/battleResolver';
 import { startDepositMonitor } from './workers/depositMonitor';
+import platformConfigService from './services/platformConfigService';
+import blockchainService from './services/blockchainService';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +52,19 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDatabase();
+
+    // Initialiser les configurations par défaut de la plateforme
+    await platformConfigService.initializeDefaults();
+    console.log('✅ Platform configurations initialized');
+
+    // Tester la connexion blockchain (pour s'assurer que le provider est bien configuré)
+    try {
+      await blockchainService.getDepositAddress();
+      console.log('✅ Blockchain provider initialized and ready');
+    } catch (error: any) {
+      console.error('⚠️  WARNING: Blockchain provider initialization failed:', error.message);
+      console.error('   Some features may not work until RPC_URL is properly configured.');
+    }
 
     // Start Express server
     app.listen(PORT, () => {

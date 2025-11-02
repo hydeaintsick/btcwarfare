@@ -38,7 +38,7 @@ router.get('/balance', async (req: AuthRequest, res: Response) => {
  */
 router.get('/deposit-address', async (req: AuthRequest, res: Response) => {
   try {
-    const address = blockchainService.getDepositAddress();
+    const address = await blockchainService.getDepositAddress();
     
     res.json({
       address,
@@ -337,7 +337,7 @@ router.post('/initiate-topup', async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer l'adresse de dépôt
-    const depositAddress = blockchainService.getDepositAddress();
+    const depositAddress = await blockchainService.getDepositAddress();
     
     // Calculer les frais et montant après frais
     const fee = amount * 0.05;
@@ -409,11 +409,27 @@ router.post('/watch-topup', async (req: AuthRequest, res: Response) => {
       // Transaction pas encore trouvée ou pas validée
       // Vérifier rapidement sur la blockchain si elle existe
       try {
-        const blockchainCheck = await blockchainService.checkDeposit(
-          txHash,
-          user.walletAddress,
-          currency
-        );
+        let blockchainCheck;
+        try {
+          blockchainCheck = await blockchainService.checkDeposit(
+            txHash,
+            user.walletAddress,
+            currency
+          );
+        } catch (blockchainError: any) {
+          // Si erreur de provider, retourner une erreur claire
+          if (blockchainError.message?.includes('Provider not configured') || 
+              blockchainError.message?.includes('RPC_URL')) {
+            console.error(`[WATCH-TOPUP] Blockchain provider not configured:`, blockchainError.message);
+            res.status(500).json({
+              status: 'failed',
+              error: 'Blockchain provider not configured on server. Please contact support.',
+              message: 'The server cannot verify blockchain transactions. Please set RPC_URL environment variable.',
+            });
+            return;
+          }
+          throw blockchainError; // Re-throw si autre erreur
+        }
 
         if (!blockchainCheck.confirmed) {
           res.json({
@@ -430,7 +446,61 @@ router.post('/watch-topup', async (req: AuthRequest, res: Response) => {
           });
           return;
         }
-      } catch (error) {
+
+        // La transaction est confirmée et valide, mais pas encore traitée
+        // Retraiter avec checkTransactionForUser pour forcer le traitement
+        console.log(`[WATCH-TOPUP] Transaction ${txHash} confirmed on blockchain, forcing processing...`);
+        
+        try {
+          const retryResult = await depositService.checkTransactionForUser(
+            req.userId,
+            txHash,
+            currency
+          );
+
+          if (retryResult.found && retryResult.status === 'completed') {
+            const updatedUser = await User.findById(req.userId);
+            res.json({
+              status: 'confirmed',
+              amount: retryResult.amount || 0,
+              fee: retryResult.fee || 0,
+              amountAfterFee: retryResult.amountAfterFee || 0,
+              newBalance: currency === 'ETH' 
+                ? (updatedUser?.balanceETH || user.balanceETH)
+                : (updatedUser?.balanceUSDT || user.balanceUSDT),
+            });
+            return;
+          }
+
+          // Si toujours pas trouvé après retry, attendre un peu
+          res.json({
+            status: 'pending',
+            message: retryResult.message || 'Transaction confirmed, processing...',
+          });
+          return;
+        } catch (processError: any) {
+          console.error(`[WATCH-TOPUP] Error processing confirmed transaction:`, processError);
+          
+          // Si erreur de provider, retourner une erreur claire
+          if (processError.message?.includes('Provider not configured') || 
+              processError.message?.includes('RPC_URL')) {
+            res.status(500).json({
+              status: 'failed',
+              error: 'Blockchain provider not configured. Please contact support.',
+              message: processError.message,
+            });
+            return;
+          }
+          
+          // Autre erreur, continuer le polling
+          res.json({
+            status: 'pending',
+            message: 'Transaction confirmed, retrying processing...',
+          });
+          return;
+        }
+      } catch (error: any) {
+        console.error(`[WATCH-TOPUP] Error checking blockchain:`, error);
         // Erreur de vérification blockchain - transaction peut être en attente
         res.json({
           status: 'pending',
@@ -438,14 +508,6 @@ router.post('/watch-topup', async (req: AuthRequest, res: Response) => {
         });
         return;
       }
-
-      // Si on arrive ici, la transaction est confirmée mais pas encore traitée
-      // Le checkTransactionForUser devrait l'avoir traitée, mais si ce n'est pas le cas, on attend
-      res.json({
-        status: 'pending',
-        message: 'Transaction confirmed, processing...',
-      });
-      return;
     }
 
     // Transaction trouvée et traitée

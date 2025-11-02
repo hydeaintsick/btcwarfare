@@ -20,7 +20,7 @@ class DepositService {
 
     this.isProcessing = true;
     try {
-      const depositAddress = blockchainService.getDepositAddress();
+      const depositAddress = await blockchainService.getDepositAddress();
       
       // Obtenir le provider depuis blockchainService ou créer un nouveau
       const rpcUrl = process.env.RPC_URL || process.env.ETH_RPC_URL;
@@ -264,11 +264,24 @@ class DepositService {
       }
 
       // VALIDATION 3: Vérifier sur la blockchain OBLIGATOIREMENT
-      const result = await blockchainService.checkDeposit(
-        txHash,
-        user.walletAddress,
-        currency
-      );
+      let result;
+      try {
+        result = await blockchainService.checkDeposit(
+          txHash,
+          user.walletAddress,
+          currency
+        );
+      } catch (error: any) {
+        console.error(`[SECURITY] Error checking blockchain for tx ${txHash}:`, error.message);
+        // Si le provider n'est pas configuré, on ne peut pas vérifier
+        if (error.message?.includes('Provider not configured')) {
+          return { 
+            found: false, 
+            message: 'Blockchain provider not configured. Please set RPC_URL environment variable.' 
+          };
+        }
+        return { found: false, message: `Blockchain check failed: ${error.message}` };
+      }
 
       if (!result.confirmed) {
         console.warn(`[SECURITY] Transaction ${txHash} not confirmed on blockchain`);

@@ -8,6 +8,7 @@ import { useWallet } from "@/hooks/useWallet";
 import Link from "next/link";
 
 const TOPUP_PACKS = [
+  { amount: 0.00001, label: "0.00001 ETH", bestseller: false, test: true },
   { amount: 0.05, label: "0.05 ETH", bestseller: false },
   { amount: 0.1, label: "0.1 ETH", bestseller: false },
   { amount: 0.2, label: "0.2 ETH", bestseller: true },
@@ -24,8 +25,9 @@ export default function TopupPage() {
   const [depositAddress, setDepositAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [txHash, setTxHash] = useState<string>("");
-  const [txStatus, setTxStatus] = useState<"idle" | "pending" | "confirmed" | "failed">("idle");
+  const [txStatus, setTxStatus] = useState<"idle" | "metaMaskPending" | "blockchainPending" | "confirmed" | "failed">("idle");
   const [error, setError] = useState<string>("");
+  const [blockConfirmationCount, setBlockConfirmationCount] = useState<number>(0);
 
   // Attendre que la vérification de l'auth soit terminée avant de rediriger
   useEffect(() => {
@@ -46,11 +48,11 @@ export default function TopupPage() {
   }, [selectedPack]);
 
   useEffect(() => {
-    // Si on a un txHash, commencer le polling
-    if (txHash && txStatus === "pending") {
+    // Si on a un txHash et qu'on attend la confirmation blockchain, commencer le polling
+    if (txHash && (txStatus === "blockchainPending" || txStatus === "metaMaskPending")) {
       const interval = setInterval(() => {
         checkTransactionStatus();
-      }, 3000); // Polling toutes les 3 secondes
+      }, 2000); // Polling toutes les 2 secondes pour un feedback plus rapide
 
       return () => clearInterval(interval);
     }
@@ -73,18 +75,27 @@ export default function TopupPage() {
       
       if (result.status === "confirmed") {
         setTxStatus("confirmed");
-        // Rediriger vers la page de succès après 2 secondes
+        // Rediriger vers la page de succès immédiatement
         setTimeout(() => {
           router.push(`/account/topup/success?amount=${selectedPack}&txHash=${txHash}&credited=${result.amountAfterFee}`);
-        }, 2000);
+        }, 1500);
       } else if (result.status === "failed") {
         setTxStatus("failed");
-        setError("Transaction failed");
+        setError("Transaction failed on blockchain");
+      } else if (result.status === "pending") {
+        // Si c'est encore pending, augmenter le compteur de blocs pour le feedback
+        setBlockConfirmationCount((prev) => prev + 1);
+        // Passer à blockchainPending si on était en metaMaskPending
+        if (txStatus === "metaMaskPending") {
+          setTxStatus("blockchainPending");
+        }
       }
-      // Si pending, on continue le polling
     } catch (error: any) {
       console.error("Error checking transaction:", error);
-      // Ne pas arrêter le polling en cas d'erreur temporaire
+      // Ne pas arrêter le polling en cas d'erreur temporaire, mais peut-être passer à blockchainPending
+      if (txStatus === "metaMaskPending") {
+        setTxStatus("blockchainPending");
+      }
     }
   };
 
@@ -108,26 +119,35 @@ export default function TopupPage() {
 
     setLoading(true);
     setError("");
+    setTxStatus("metaMaskPending");
+    setBlockConfirmationCount(0);
 
     try {
       // Initier le topup côté backend
       await apiClient.initiateTopup(selectedPack, "ETH");
 
       // Envoyer la transaction via MetaMask
+      // sendTransaction retourne le hash immédiatement après confirmation MetaMask
       const result = await sendTransaction(depositAddress, selectedPack, "ETH");
       
       setTxHash(result.hash);
-      setTxStatus("pending");
       
-      // Commencer le polling immédiatement
+      // MetaMask a confirmé, on passe à l'attente de la confirmation blockchain
+      setTxStatus("blockchainPending");
+      setLoading(false);
+      
+      // Commencer le polling immédiatement pour vérifier la confirmation blockchain
       checkTransactionStatus();
     } catch (err: any) {
       setError(err.message || "Failed to send transaction");
       setTxStatus("failed");
-      console.error("Payment error:", err);
-    } finally {
       setLoading(false);
+      console.error("Payment error:", err);
+      return;
     }
+    
+    // Ne pas mettre loading à false ici car on attend toujours la confirmation blockchain
+    // setLoading(false) sera fait quand on aura la confirmation
   };
 
   const selectedAmount = selectedPack || 0;
@@ -150,22 +170,27 @@ export default function TopupPage() {
         {/* Pack Selection */}
         <div>
           <h3 className="text-xl font-bold mb-4 neon-text">Select a Pack</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {TOPUP_PACKS.map((pack) => (
               <motion.button
                 key={pack.amount}
                 onClick={() => handlePackSelect(pack.amount)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`glass rounded-xl p-6 text-center transition-all ${
+                className={`glass rounded-xl p-6 text-center transition-all relative ${
                   selectedPack === pack.amount
                     ? "border-2 border-neon-cyan bg-neon-cyan/20"
                     : "border-2 border-transparent hover:border-gray-600"
-                }`}
+                } ${pack.test ? "border-yellow-500 border-dashed" : ""}`}
               >
                 {pack.bestseller && (
                   <div className="absolute -top-2 -right-2 bg-neon-pink text-black text-xs font-bold px-2 py-1 rounded-full">
                     Best seller
+                  </div>
+                )}
+                {pack.test && (
+                  <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded-full">
+                    Test
                   </div>
                 )}
                 <div className="text-2xl font-bold neon-cyan mb-2">
@@ -173,6 +198,9 @@ export default function TopupPage() {
                 </div>
                 {pack.bestseller && (
                   <div className="text-xs text-neon-pink mt-1">⭐ Popular</div>
+                )}
+                {pack.test && (
+                  <div className="text-xs text-yellow-400 mt-1">🧪 Testing</div>
                 )}
               </motion.button>
             ))}
@@ -217,45 +245,79 @@ export default function TopupPage() {
               </div>
             )}
 
-            {txStatus === "pending" && txHash && (
+            {txStatus === "metaMaskPending" && (
+              <div className="p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-blue-400 font-medium">
+                    Step 1/2: Waiting for MetaMask confirmation...
+                  </span>
+                </div>
+                <p className="text-sm text-gray-300 mt-2">
+                  Please confirm the transaction in your MetaMask wallet.
+                </p>
+              </div>
+            )}
+
+            {(txStatus === "blockchainPending" || txStatus === "metaMaskPending") && txHash && (
               <div className="p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
                   <span className="text-yellow-400 font-medium">
-                    Transaction pending...
+                    Step 2/2: Transaction sent! Waiting for blockchain confirmation...
                   </span>
                 </div>
-                <div className="text-xs text-gray-400 font-mono break-all mt-2">
+                <div className="text-xs text-gray-400 font-mono break-all mt-2 bg-gray-900/50 p-2 rounded">
                   {txHash}
                 </div>
-                <p className="text-sm text-gray-300 mt-2">
-                  Waiting for blockchain confirmation. This may take a few minutes.
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-sm text-gray-300">
+                    Checking blockchain every 2 seconds...
+                  </p>
+                  <div className="text-xs text-yellow-400 font-mono">
+                    Checks: {blockConfirmationCount}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  ⏱️ Usually confirms within 15-30 seconds on Ethereum mainnet
                 </p>
+                <a
+                  href={`https://etherscan.io/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-neon-cyan hover:underline mt-2 inline-block"
+                >
+                  View on Etherscan →
+                </a>
               </div>
             )}
 
             {txStatus === "confirmed" && (
               <div className="p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-green-400 font-bold">✓ Transaction confirmed!</span>
+                  <span className="text-green-400 font-bold text-lg">✓ Transaction confirmed!</span>
                 </div>
                 <p className="text-sm text-gray-300">
-                  Redirecting to success page...
+                  Your account is being credited. Redirecting...
                 </p>
               </div>
             )}
 
             <button
               onClick={handlePay}
-              disabled={loading || txStatus === "pending" || txStatus === "confirmed"}
+              disabled={loading || (txStatus !== "idle" && txStatus !== "failed")}
               className="w-full py-4 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             >
-              {loading
-                ? "Processing..."
-                : txStatus === "pending"
-                ? "Waiting for confirmation..."
+              {txStatus === "metaMaskPending"
+                ? "Waiting for MetaMask..."
+                : txStatus === "blockchainPending"
+                ? `Checking blockchain... (${blockConfirmationCount} checks)`
                 : txStatus === "confirmed"
-                ? "Confirmed!"
+                ? "✓ Confirmed! Redirecting..."
+                : txStatus === "failed"
+                ? "Transaction Failed - Try Again"
+                : loading
+                ? "Preparing transaction..."
                 : "Pay with MetaMask"}
             </button>
           </motion.div>
