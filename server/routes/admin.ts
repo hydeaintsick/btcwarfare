@@ -206,10 +206,11 @@ router.post(
         return;
       }
 
-      // Calculer le montant total à envoyer (montant + frais)
-      const amount = withdrawal.amount || 0;
+      // Calculer le montant total débité et le montant net à envoyer
+      // amount contient maintenant le montant total débité (incluant les frais)
+      const totalAmount = withdrawal.amount || 0;
       const fee = withdrawal.feeAmount || 0;
-      const totalAmount = amount + fee;
+      const userAmount = totalAmount - fee; // Montant net que l'utilisateur recevra
 
       // Exécuter le retrait sur la blockchain
       try {
@@ -243,10 +244,10 @@ router.post(
           return;
         }
 
-        // Envoyer la transaction
+        // Envoyer la transaction (envoyer le montant net à l'utilisateur, les frais restent sur la plateforme)
         const tx = await platformWallet.sendTransaction({
           to: destinationAddress,
-          value: ethers.parseEther(totalAmount.toString()),
+          value: ethers.parseEther(userAmount.toString()),
         });
 
         // Attendre la confirmation
@@ -261,7 +262,7 @@ router.post(
           message: "Withdrawal approved and executed",
           transactionId: withdrawal._id,
           txHash: tx.hash,
-          amount,
+          amount: userAmount,
           fee,
           total: totalAmount,
           currency: withdrawal.currency,
@@ -312,11 +313,10 @@ router.post(
       }
 
       // Restaurer le balance de l'utilisateur (rembourser le montant débité)
+      // amount contient maintenant le montant total débité (incluant les frais)
       const user = withdrawal.userId as any;
       if (user) {
-        const amount = withdrawal.amount || 0;
-        const fee = withdrawal.feeAmount || 0;
-        const totalAmount = amount + fee;
+        const totalAmount = withdrawal.amount || 0; // Montant total débité (incluant les frais)
 
         if (withdrawal.currency === "ETH") {
           user.balanceETH += totalAmount;

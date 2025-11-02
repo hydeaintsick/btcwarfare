@@ -153,6 +153,16 @@ class ApiClient {
     });
   }
 
+  async cancelWithdrawal(id: string) {
+    return this.request<{
+      message: string;
+      transactionId: string;
+      newBalance: number;
+    }>(`/wallet/withdraw/${id}/cancel`, {
+      method: "POST",
+    });
+  }
+
   async getTransactions() {
     return this.request<{
       transactions: Array<{

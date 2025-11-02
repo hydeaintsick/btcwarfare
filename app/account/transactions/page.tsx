@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api";
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTransactions();
@@ -20,6 +21,23 @@ export default function TransactionsPage() {
       console.error("Error loading transactions:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelWithdrawal = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this withdrawal?")) {
+      return;
+    }
+
+    setCancellingId(id);
+    try {
+      await apiClient.cancelWithdrawal(id);
+      alert("Withdrawal cancelled successfully");
+      await loadTransactions(); // Reload transactions
+    } catch (error: any) {
+      alert(error.message || "Error cancelling withdrawal");
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -47,6 +65,7 @@ export default function TransactionsPage() {
                 <th className="text-left py-3 px-4 text-gray-400">Fee</th>
                 <th className="text-left py-3 px-4 text-gray-400">Status</th>
                 <th className="text-left py-3 px-4 text-gray-400">Date</th>
+                <th className="text-left py-3 px-4 text-gray-400">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -77,6 +96,17 @@ export default function TransactionsPage() {
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-400">
                     {new Date(tx.createdAt).toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4">
+                    {tx.type === "withdrawal" && tx.status === "pending" && (
+                      <button
+                        onClick={() => handleCancelWithdrawal(tx.id)}
+                        disabled={cancellingId === tx.id}
+                        className="px-3 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {cancellingId === tx.id ? "Cancelling..." : "Cancel"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

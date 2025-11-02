@@ -28,9 +28,16 @@ router.get('/balance', async (req: AuthRequest, res: Response) => {
     // On inclut les stakes aussi pour calculer correctement le solde
     // car les wins représentent le montant total gagné (inclut les 2 mises)
     // et les stakes représentent les mises individuelles
-    const transactions = await Transaction.find({
+    const completedTransactions = await Transaction.find({
       userId: req.userId,
       status: 'completed',
+    });
+
+    // Récupérer aussi les withdrawals pending pour les soustraire du solde disponible
+    const pendingWithdrawals = await Transaction.find({
+      userId: req.userId,
+      type: 'withdrawal',
+      status: 'pending',
     });
 
     // Calculer le solde ETH à partir des transactions
@@ -38,7 +45,8 @@ router.get('/balance', async (req: AuthRequest, res: Response) => {
     // Calculer le solde USDT à partir des transactions
     let balanceUSDT = 0;
 
-    for (const tx of transactions) {
+    // Calculer le solde à partir des transactions complétées
+    for (const tx of completedTransactions) {
       const amount = tx.amount || 0;
       const feeAmount = tx.feeAmount || 0;
       
@@ -50,8 +58,8 @@ router.get('/balance', async (req: AuthRequest, res: Response) => {
           // Les gains créditent le montant total gagné (inclut déjà les 2 mises de la bataille)
           balanceETH += amount;
         } else if (tx.type === 'withdrawal') {
-          // Les retraits débitent : montant retiré + frais
-          balanceETH -= (amount + feeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceETH -= amount;
         } else if (tx.type === 'stake') {
           // Les stakes débitent : montant parié + frais
           // Note: Les wins créditent déjà le montant total (2x mise), donc on doit soustraire les stakes
@@ -65,13 +73,23 @@ router.get('/balance', async (req: AuthRequest, res: Response) => {
           // Les gains créditent le montant total gagné (inclut déjà les 2 mises de la bataille)
           balanceUSDT += amount;
         } else if (tx.type === 'withdrawal') {
-          // Les retraits débitent : montant retiré + frais
-          balanceUSDT -= (amount + feeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceUSDT -= amount;
         } else if (tx.type === 'stake') {
           // Les stakes débitent : montant parié + frais
           // Note: Les wins créditent déjà le montant total (2x mise), donc on doit soustraire les stakes
           balanceUSDT -= (amount + feeAmount);
         }
+      }
+    }
+
+    // Soustraire les withdrawals pending du solde disponible
+    for (const withdrawal of pendingWithdrawals) {
+      const amount = withdrawal.amount || 0;
+      if (withdrawal.currency === 'ETH') {
+        balanceETH -= amount;
+      } else if (withdrawal.currency === 'USDT') {
+        balanceUSDT -= amount;
       }
     }
 
@@ -239,15 +257,23 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
     }
 
     // Calculer le solde dynamiquement à partir des transactions
-    const transactions = await Transaction.find({
+    const completedTransactions = await Transaction.find({
       userId: req.userId,
       status: 'completed',
+    });
+
+    // Récupérer aussi les withdrawals pending pour les soustraire du solde disponible
+    const pendingWithdrawals = await Transaction.find({
+      userId: req.userId,
+      type: 'withdrawal',
+      status: 'pending',
     });
 
     let balanceETH = 0;
     let balanceUSDT = 0;
 
-    for (const tx of transactions) {
+    // Calculer le solde à partir des transactions complétées
+    for (const tx of completedTransactions) {
       const txAmount = tx.amount || 0;
       const txFeeAmount = tx.feeAmount || 0;
       
@@ -257,7 +283,8 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
         } else if (tx.type === 'win') {
           balanceETH += txAmount;
         } else if (tx.type === 'withdrawal') {
-          balanceETH -= (txAmount + txFeeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceETH -= txAmount;
         } else if (tx.type === 'stake') {
           balanceETH -= (txAmount + txFeeAmount);
         }
@@ -267,10 +294,21 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
         } else if (tx.type === 'win') {
           balanceUSDT += txAmount;
         } else if (tx.type === 'withdrawal') {
-          balanceUSDT -= (txAmount + txFeeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceUSDT -= txAmount;
         } else if (tx.type === 'stake') {
           balanceUSDT -= (txAmount + txFeeAmount);
         }
+      }
+    }
+
+    // Soustraire les withdrawals pending du solde disponible
+    for (const withdrawal of pendingWithdrawals) {
+      const amount = withdrawal.amount || 0;
+      if (withdrawal.currency === 'ETH') {
+        balanceETH -= amount;
+      } else if (withdrawal.currency === 'USDT') {
+        balanceUSDT -= amount;
       }
     }
 
@@ -306,7 +344,7 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
     const transaction = await Transaction.create({
       userId: user._id,
       type: 'withdrawal',
-      amount: amount, // Montant que l'utilisateur recevra
+      amount: totalRequired, // Montant total débité (incluant les frais)
       currency,
       status: 'pending',
       feeAmount: withdrawalFee,
@@ -401,6 +439,57 @@ router.get('/transactions', async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Transactions history error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/wallet/withdraw/:id/cancel
+ * Annuler un retrait en attente
+ */
+router.post('/withdraw/:id/cancel', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Trouver le withdrawal
+    const withdrawal = await Transaction.findOne({
+      _id: id,
+      userId: req.userId,
+      type: 'withdrawal',
+      status: 'pending',
+    });
+
+    if (!withdrawal) {
+      res.status(404).json({ error: 'Withdrawal not found or cannot be cancelled' });
+      return;
+    }
+
+    // Restaurer le balance de l'utilisateur (rembourser le montant débité)
+    const totalAmount = withdrawal.amount || 0;
+    if (withdrawal.currency === 'ETH') {
+      user.balanceETH += totalAmount;
+    } else {
+      user.balanceUSDT += totalAmount;
+    }
+    await user.save();
+
+    // Marquer le withdrawal comme failed (annulé)
+    withdrawal.status = 'failed';
+    await withdrawal.save();
+
+    res.json({
+      message: 'Withdrawal cancelled successfully',
+      transactionId: withdrawal._id,
+      newBalance: withdrawal.currency === 'ETH' ? user.balanceETH : user.balanceUSDT,
+    });
+  } catch (error) {
+    console.error('Cancel withdrawal error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -121,8 +121,8 @@ class AdminService {
             // Les gains créditent le montant total gagné
             userBalanceETH += amount;
           } else if (tx.type === 'withdrawal') {
-            // Les retraits débitent : montant retiré + frais
-            userBalanceETH -= amount + feeAmount;
+            // Les retraits débitent le montant total (amount contient déjà les frais)
+            userBalanceETH -= amount;
           } else if (tx.type === 'stake') {
             // Les stakes débitent : montant parié + frais
             userBalanceETH -= amount + feeAmount;

@@ -97,15 +97,23 @@ router.post('/verify', async (req: Request, res: Response) => {
     const token = createToken(user._id.toString());
 
     // Calculer le solde dynamiquement à partir des transactions
-    const transactions = await Transaction.find({
+    const completedTransactions = await Transaction.find({
       userId: user._id,
       status: 'completed',
+    });
+
+    // Récupérer aussi les withdrawals pending pour les soustraire du solde disponible
+    const pendingWithdrawals = await Transaction.find({
+      userId: user._id,
+      type: 'withdrawal',
+      status: 'pending',
     });
 
     let balanceETH = 0;
     let balanceUSDT = 0;
 
-    for (const tx of transactions) {
+    // Calculer le solde à partir des transactions complétées
+    for (const tx of completedTransactions) {
       const amount = tx.amount || 0;
       const feeAmount = tx.feeAmount || 0;
       
@@ -115,7 +123,8 @@ router.post('/verify', async (req: Request, res: Response) => {
         } else if (tx.type === 'win') {
           balanceETH += amount;
         } else if (tx.type === 'withdrawal') {
-          balanceETH -= (amount + feeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceETH -= amount;
         } else if (tx.type === 'stake') {
           balanceETH -= (amount + feeAmount);
         }
@@ -125,10 +134,21 @@ router.post('/verify', async (req: Request, res: Response) => {
         } else if (tx.type === 'win') {
           balanceUSDT += amount;
         } else if (tx.type === 'withdrawal') {
-          balanceUSDT -= (amount + feeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceUSDT -= amount;
         } else if (tx.type === 'stake') {
           balanceUSDT -= (amount + feeAmount);
         }
+      }
+    }
+
+    // Soustraire les withdrawals pending du solde disponible
+    for (const withdrawal of pendingWithdrawals) {
+      const amount = withdrawal.amount || 0;
+      if (withdrawal.currency === 'ETH') {
+        balanceETH -= amount;
+      } else if (withdrawal.currency === 'USDT') {
+        balanceUSDT -= amount;
       }
     }
 
@@ -164,15 +184,23 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     // Calculer le solde dynamiquement à partir des transactions
-    const transactions = await Transaction.find({
+    const completedTransactions = await Transaction.find({
       userId: req.userId,
       status: 'completed',
+    });
+
+    // Récupérer aussi les withdrawals pending pour les soustraire du solde disponible
+    const pendingWithdrawals = await Transaction.find({
+      userId: req.userId,
+      type: 'withdrawal',
+      status: 'pending',
     });
 
     let balanceETH = 0;
     let balanceUSDT = 0;
 
-    for (const tx of transactions) {
+    // Calculer le solde à partir des transactions complétées
+    for (const tx of completedTransactions) {
       const amount = tx.amount || 0;
       const feeAmount = tx.feeAmount || 0;
       
@@ -182,7 +210,8 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         } else if (tx.type === 'win') {
           balanceETH += amount;
         } else if (tx.type === 'withdrawal') {
-          balanceETH -= (amount + feeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceETH -= amount;
         } else if (tx.type === 'stake') {
           balanceETH -= (amount + feeAmount);
         }
@@ -192,10 +221,21 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         } else if (tx.type === 'win') {
           balanceUSDT += amount;
         } else if (tx.type === 'withdrawal') {
-          balanceUSDT -= (amount + feeAmount);
+          // Les retraits débitent le montant total (amount contient déjà les frais)
+          balanceUSDT -= amount;
         } else if (tx.type === 'stake') {
           balanceUSDT -= (amount + feeAmount);
         }
+      }
+    }
+
+    // Soustraire les withdrawals pending du solde disponible
+    for (const withdrawal of pendingWithdrawals) {
+      const amount = withdrawal.amount || 0;
+      if (withdrawal.currency === 'ETH') {
+        balanceETH -= amount;
+      } else if (withdrawal.currency === 'USDT') {
+        balanceUSDT -= amount;
       }
     }
 

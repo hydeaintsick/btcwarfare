@@ -1,18 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { apiClient } from "@/lib/api";
 import { useWallet } from "@/hooks/useWallet";
 
 export default function WithdrawPage() {
-  const { user } = useWallet();
+  const { user, refreshUser } = useWallet();
   const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">(
     "ETH"
   );
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [withdrawAddress, setWithdrawAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
+  const [loadingWithdrawals, setLoadingWithdrawals] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadPendingWithdrawals();
+  }, []);
+
+  const loadPendingWithdrawals = async () => {
+    try {
+      setLoadingWithdrawals(true);
+      const data = await apiClient.getTransactions();
+      const withdrawals = data.transactions.filter(
+        (tx: any) => tx.type === "withdrawal" && tx.status === "pending"
+      );
+      setPendingWithdrawals(withdrawals);
+    } catch (error) {
+      console.error("Error loading withdrawals:", error);
+    } finally {
+      setLoadingWithdrawals(false);
+    }
+  };
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || !withdrawAddress || !selectedCurrency) {
@@ -38,10 +60,30 @@ export default function WithdrawPage() {
       );
       setWithdrawAmount("");
       setWithdrawAddress("");
+      await loadPendingWithdrawals(); // Recharger la liste
+      await refreshUser(); // Rafraîchir le solde
     } catch (error: any) {
       alert(error.message || "Error creating withdrawal");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelWithdrawal = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this withdrawal?")) {
+      return;
+    }
+
+    setCancellingId(id);
+    try {
+      await apiClient.cancelWithdrawal(id);
+      alert("Withdrawal cancelled successfully");
+      await loadPendingWithdrawals(); // Recharger la liste
+      await refreshUser(); // Rafraîchir le solde
+    } catch (error: any) {
+      alert(error.message || "Error cancelling withdrawal");
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -142,6 +184,76 @@ export default function WithdrawPage() {
           {loading ? "Processing..." : "Withdraw"}
         </button>
       </div>
+
+      {/* Pending Withdrawals Section */}
+      {(pendingWithdrawals.length > 0 || loadingWithdrawals) && (
+        <div className="mt-8">
+          <h3 className="text-xl font-bold mb-4 neon-text">
+            Pending Withdrawals
+          </h3>
+          {loadingWithdrawals ? (
+            <p className="text-gray-400 text-center py-4">Loading...</p>
+          ) : pendingWithdrawals.length > 0 ? (
+            <div className="space-y-3">
+              {pendingWithdrawals.map((withdrawal) => (
+                <div
+                  key={withdrawal.id}
+                  className="glass rounded-lg p-4 border border-yellow-500/20"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium text-gray-300">
+                          {(withdrawal.amount - (withdrawal.fee || 0)).toFixed(
+                            10
+                          )}{" "}
+                          {withdrawal.currency}
+                        </span>
+                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">
+                          {withdrawal.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-400 space-y-1">
+                        <div>
+                          Total debited: {withdrawal.amount.toFixed(10)}{" "}
+                          {withdrawal.currency}
+                        </div>
+                        <div>
+                          Fee: {withdrawal.fee?.toFixed(10) || "0"}{" "}
+                          {withdrawal.currency}
+                        </div>
+                        <div>
+                          To: {withdrawal.txHash?.substring(0, 10)}...
+                          {withdrawal.txHash?.substring(
+                            withdrawal.txHash.length - 8
+                          )}
+                        </div>
+                        <div>
+                          Created:{" "}
+                          {new Date(withdrawal.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCancelWithdrawal(withdrawal.id)}
+                      disabled={cancellingId === withdrawal.id}
+                      className="px-4 py-2 bg-red-500/20 text-red-400 rounded text-sm hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-4"
+                    >
+                      {cancellingId === withdrawal.id
+                        ? "Cancelling..."
+                        : "Cancel"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-center py-4">
+              No pending withdrawals
+            </p>
+          )}
+        </div>
+      )}
     </>
   );
 }
