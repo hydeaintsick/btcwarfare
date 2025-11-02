@@ -1,10 +1,7 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 class ApiClient {
-  private token: string | null = null;
-
   setToken(token: string | null) {
-    this.token = token;
     if (token) {
       localStorage.setItem('auth_token', token);
     } else {
@@ -13,10 +10,9 @@ class ApiClient {
   }
 
   getToken(): string | null {
-    if (!this.token) {
-      this.token = localStorage.getItem('auth_token');
-    }
-    return this.token;
+    // Always read from localStorage to get the latest value
+    // This ensures consistency across multiple instances and after disconnect/connect
+    return localStorage.getItem('auth_token');
   }
 
   private async request<T>(

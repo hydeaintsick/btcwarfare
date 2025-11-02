@@ -9,7 +9,7 @@ import { formatAddress } from "@/lib/utils";
 
 export function Header() {
   const pathname = usePathname();
-  const { isConnected, address, disconnect } = useWallet();
+  const { isConnected, address, disconnect, connect, isConnecting } = useWallet();
   const [showMenu, setShowMenu] = React.useState(false);
 
   // Close menu when clicking outside
@@ -137,12 +137,13 @@ export function Header() {
                 )}
               </div>
             ) : (
-              <Link
-                href="/battle"
-                className="px-4 py-2 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan"
+              <button
+                onClick={() => connect()}
+                disabled={isConnecting}
+                className="px-4 py-2 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Connect Wallet
-              </Link>
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
             )}
           </div>
         </div>
