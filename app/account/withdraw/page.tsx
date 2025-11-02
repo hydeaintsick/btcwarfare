@@ -7,7 +7,9 @@ import { useWallet } from "@/hooks/useWallet";
 
 export default function WithdrawPage() {
   const { user } = useWallet();
-  const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
+  const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">(
+    "ETH"
+  );
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [withdrawAddress, setWithdrawAddress] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -26,8 +28,14 @@ export default function WithdrawPage() {
 
     setLoading(true);
     try {
-      const result = await apiClient.withdraw(amount, selectedCurrency, withdrawAddress);
-      alert(`Withdrawal request created. You will receive ${result.amount} ${result.currency} (fee: ${result.fee} ${result.currency})`);
+      const result = await apiClient.withdraw(
+        amount,
+        selectedCurrency,
+        withdrawAddress
+      );
+      alert(
+        `Withdrawal request created. You will receive ${result.amount} ${result.currency} (fee: ${result.fee} ${result.currency})`
+      );
       setWithdrawAmount("");
       setWithdrawAddress("");
     } catch (error: any) {
@@ -37,9 +45,12 @@ export default function WithdrawPage() {
     }
   };
 
-  const balance = selectedCurrency === "ETH" ? user?.balanceETH || 0 : user?.balanceUSDT || 0;
+  const balance =
+    selectedCurrency === "ETH" ? user?.balanceETH || 0 : user?.balanceUSDT || 0;
   const withdrawalFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.05 : 0;
-  const totalRequired = withdrawAmount ? parseFloat(withdrawAmount) + withdrawalFee : 0;
+  const totalRequired = withdrawAmount
+    ? parseFloat(withdrawAmount) + withdrawalFee
+    : 0;
 
   return (
     <>
@@ -59,7 +70,7 @@ export default function WithdrawPage() {
             >
               ETH
             </button>
-            <button
+            {/* <button
               onClick={() => setSelectedCurrency("USDT")}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
                 selectedCurrency === "USDT"
@@ -68,10 +79,10 @@ export default function WithdrawPage() {
               }`}
             >
               USDT
-            </button>
+            </button> */}
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            Available: {balance.toFixed(6)} {selectedCurrency}
+            Available: {balance.toFixed(10)} {selectedCurrency}
           </p>
         </div>
 
@@ -87,9 +98,17 @@ export default function WithdrawPage() {
           />
           {withdrawAmount && (
             <div className="mt-2 space-y-1 text-xs text-gray-400">
-              <div>Withdrawal amount: {parseFloat(withdrawAmount).toFixed(6)} {selectedCurrency}</div>
-              <div>Platform fee (5%): {withdrawalFee.toFixed(6)} {selectedCurrency}</div>
-              <div className="font-medium text-gray-300">Total required: {totalRequired.toFixed(6)} {selectedCurrency}</div>
+              <div>
+                Withdrawal amount: {parseFloat(withdrawAmount).toFixed(10)}{" "}
+                {selectedCurrency}
+              </div>
+              <div>
+                Platform fee (5%): {withdrawalFee.toFixed(10)}{" "}
+                {selectedCurrency}
+              </div>
+              <div className="font-medium text-gray-300">
+                Total required: {totalRequired.toFixed(10)} {selectedCurrency}
+              </div>
               {totalRequired > balance && (
                 <div className="text-red-400">⚠️ Insufficient balance</div>
               )}
@@ -98,7 +117,9 @@ export default function WithdrawPage() {
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Destination Address</label>
+          <label className="block text-sm text-gray-400 mb-2">
+            Destination Address
+          </label>
           <input
             type="text"
             value={withdrawAddress}
@@ -110,7 +131,12 @@ export default function WithdrawPage() {
 
         <button
           onClick={handleWithdraw}
-          disabled={loading || !withdrawAmount || !withdrawAddress || totalRequired > balance}
+          disabled={
+            loading ||
+            !withdrawAmount ||
+            !withdrawAddress ||
+            totalRequired > balance
+          }
           className="w-full px-6 py-3 bg-neon-pink text-black rounded-lg font-bold hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Processing..." : "Withdraw"}
@@ -119,4 +145,3 @@ export default function WithdrawPage() {
     </>
   );
 }
-

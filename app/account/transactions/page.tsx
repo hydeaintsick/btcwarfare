@@ -26,7 +26,9 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <>
-        <h2 className="text-3xl font-bold mb-6 neon-text">Transaction History</h2>
+        <h2 className="text-3xl font-bold mb-6 neon-text">
+          Transaction History
+        </h2>
         <p className="text-gray-400 text-center py-12">Loading...</p>
       </>
     );
@@ -49,20 +51,27 @@ export default function TransactionsPage() {
             </thead>
             <tbody>
               {transactions.map((tx) => (
-                <tr key={tx.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <tr
+                  key={tx.id}
+                  className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                >
                   <td className="py-3 px-4 capitalize">{tx.type}</td>
                   <td className="py-3 px-4">
-                    {tx.amount.toFixed(6)} {tx.currency}
+                    {tx.amount.toFixed(10)} {tx.currency}
                   </td>
                   <td className="py-3 px-4 text-gray-400">
-                    {tx.fee ? `${tx.fee.toFixed(6)} ${tx.currency}` : "-"}
+                    {tx.fee ? `${tx.fee.toFixed(10)} ${tx.currency}` : "-"}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      tx.status === "completed" ? "bg-green-500/20 text-green-400" :
-                      tx.status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
-                      "bg-red-500/20 text-red-400"
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        tx.status === "completed"
+                          ? "bg-green-500/20 text-green-400"
+                          : tx.status === "pending"
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : "bg-red-500/20 text-red-400"
+                      }`}
+                    >
                       {tx.status}
                     </span>
                   </td>
@@ -80,4 +89,3 @@ export default function TransactionsPage() {
     </>
   );
 }
-

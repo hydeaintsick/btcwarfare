@@ -11,7 +11,10 @@ export default function TopupSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useWallet();
-  const [balance, setBalance] = useState<{ balanceETH: number; balanceUSDT: number } | null>(null);
+  const [balance, setBalance] = useState<{
+    balanceETH: number;
+    balanceUSDT: number;
+  } | null>(null);
 
   const amount = parseFloat(searchParams.get("amount") || "0");
   const txHash = searchParams.get("txHash") || "";
@@ -34,7 +37,9 @@ export default function TopupSuccessPage() {
   if (!amount || !txHash) {
     return (
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-6 neon-text">Invalid Success Page</h2>
+        <h2 className="text-3xl font-bold mb-6 neon-text">
+          Invalid Success Page
+        </h2>
         <Link
           href="/account/balance"
           className="inline-block px-6 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90"
@@ -80,28 +85,35 @@ export default function TopupSuccessPage() {
             <div className="flex justify-between items-center py-3 border-b border-gray-700">
               <span className="text-gray-400">Amount sent:</span>
               <span className="text-lg font-bold neon-cyan">
-                {amount.toFixed(6)} ETH
+                {amount.toFixed(10)} ETH
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center py-3 border-b border-gray-700">
               <span className="text-gray-400">Platform fee (5%):</span>
               <span className="text-lg font-bold text-yellow-400">
-                -{(amount * 0.05).toFixed(6)} ETH
+                -{(amount * 0.05).toFixed(10)} ETH
               </span>
             </div>
 
             <div className="flex justify-between items-center py-4 bg-neon-cyan/10 rounded-lg px-4">
-              <span className="text-xl font-medium neon-cyan">Amount credited:</span>
+              <span className="text-xl font-medium neon-cyan">
+                Amount credited:
+              </span>
               <span className="text-2xl font-bold neon-pink">
-                {credited > 0 ? credited.toFixed(6) : (amount * 0.95).toFixed(6)} ETH
+                {credited > 0
+                  ? credited.toFixed(10)
+                  : (amount * 0.95).toFixed(10)}{" "}
+                ETH
               </span>
             </div>
           </div>
 
           {txHash && (
             <div className="pt-4 border-t border-gray-700">
-              <div className="text-sm text-gray-400 mb-2">Transaction Hash:</div>
+              <div className="text-sm text-gray-400 mb-2">
+                Transaction Hash:
+              </div>
               <code className="text-xs font-mono break-all text-gray-300 bg-gray-900 p-3 rounded-lg block">
                 {txHash}
               </code>
@@ -120,7 +132,7 @@ export default function TopupSuccessPage() {
             <div className="pt-4 border-t border-gray-700">
               <div className="text-sm text-gray-400 mb-2">Current Balance:</div>
               <div className="text-2xl font-bold neon-cyan">
-                {balance.balanceETH.toFixed(6)} ETH
+                {balance.balanceETH.toFixed(10)} ETH
               </div>
             </div>
           )}
@@ -149,4 +161,3 @@ export default function TopupSuccessPage() {
     </>
   );
 }
-

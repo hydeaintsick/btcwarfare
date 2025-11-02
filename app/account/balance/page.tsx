@@ -85,7 +85,7 @@ export default function BalancePage() {
       </div>
 
       {/* Balance Cards */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="grid gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -129,7 +129,7 @@ export default function BalancePage() {
             >
               ETH
             </button>
-            <button
+            {/* <button
               onClick={() => setSelectedCurrency("USDT")}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
                 selectedCurrency === "USDT"
@@ -138,7 +138,7 @@ export default function BalancePage() {
               }`}
             >
               USDT
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -242,7 +242,7 @@ export default function BalancePage() {
                     </div>
                     {deposit.fee && (
                       <div className="text-xs text-gray-400">
-                        Fee: {deposit.fee.toFixed(6)} {deposit.currency}
+                        Fee: {deposit.fee.toFixed(10)} {deposit.currency}
                       </div>
                     )}
                   </div>

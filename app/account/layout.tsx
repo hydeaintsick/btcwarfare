@@ -107,7 +107,7 @@ export default function AccountLayout({
                 <div className="pb-4 mb-4 border-b border-white/10">
                   <div className="text-xs text-gray-400 mb-2">ETH Balance</div>
                   <div className="text-lg font-bold neon-cyan">
-                    {balanceETH.toFixed(6)} ETH
+                    {balanceETH.toFixed(10)} ETH
                   </div>
                   {/* <div className="text-xs text-gray-400 mt-2 mb-2">USDT Balance</div>
                   <div className="text-lg font-bold neon-pink">{balanceUSDT.toFixed(2)} USDT</div> */}
