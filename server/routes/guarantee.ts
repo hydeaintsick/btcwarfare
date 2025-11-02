@@ -84,6 +84,7 @@ router.get("/guaranteetx/:key", async (req, res: Response) => {
 
     const report = {
       startTime: new Date().toISOString(),
+      endTime: "" as string,
       fromBlock,
       toBlock: currentBlock,
       scannedBlocks: currentBlock - fromBlock,
@@ -248,6 +249,11 @@ router.get("/guaranteetx/:key", async (req, res: Response) => {
 
       for (const event of events) {
         try {
+          // Vérifier que l'événement a été parsé et contient args
+          if (!("args" in event) || !event.args) {
+            continue;
+          }
+
           const txHash = event.transactionHash;
           const from = event.args[0].toLowerCase();
           const value = event.args[2];
