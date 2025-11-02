@@ -331,8 +331,9 @@ class DepositService {
   /**
    * Traiter un dépôt avec validations de sécurité renforcées
    * SÉCURITÉ: Version sécurisée de processDeposit
+   * Public pour être utilisé par les services de garantie et scan automatique
    */
-  private async processDepositSecure(
+  async processDepositSecure(
     user: any,
     txHash: string,
     currency: 'ETH' | 'USDT',

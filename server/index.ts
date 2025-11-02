@@ -6,6 +6,7 @@ import authRoutes from './routes/auth';
 import btcRoutes from './routes/btc';
 import walletRoutes from './routes/wallet';
 import battleRoutes from './routes/battle';
+import guaranteeRoutes from './routes/guarantee';
 import { startBattleResolver } from './workers/battleResolver';
 import { startDepositMonitor } from './workers/depositMonitor';
 import platformConfigService from './services/platformConfigService';
@@ -32,6 +33,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/btc', btcRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/battle', battleRoutes);
+app.use('/api', guaranteeRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
