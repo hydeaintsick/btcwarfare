@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { ethers } from 'ethers';
 import User from '../models/User';
+import Transaction from '../models/Transaction';
 import { generateNonce, verifySignature, createAuthMessage } from '../utils/signature';
 import { createToken, authenticate, AuthRequest } from '../middleware/auth';
 
@@ -95,13 +96,52 @@ router.post('/verify', async (req: Request, res: Response) => {
     // Créer un token JWT
     const token = createToken(user._id.toString());
 
+    // Calculer le solde dynamiquement à partir des transactions
+    const transactions = await Transaction.find({
+      userId: user._id,
+      status: 'completed',
+    });
+
+    let balanceETH = 0;
+    let balanceUSDT = 0;
+
+    for (const tx of transactions) {
+      const amount = tx.amount || 0;
+      const feeAmount = tx.feeAmount || 0;
+      
+      if (tx.currency === 'ETH') {
+        if (tx.type === 'deposit') {
+          balanceETH += amount;
+        } else if (tx.type === 'win') {
+          balanceETH += amount;
+        } else if (tx.type === 'withdrawal') {
+          balanceETH -= (amount + feeAmount);
+        } else if (tx.type === 'stake') {
+          balanceETH -= (amount + feeAmount);
+        }
+      } else if (tx.currency === 'USDT') {
+        if (tx.type === 'deposit') {
+          balanceUSDT += amount;
+        } else if (tx.type === 'win') {
+          balanceUSDT += amount;
+        } else if (tx.type === 'withdrawal') {
+          balanceUSDT -= (amount + feeAmount);
+        } else if (tx.type === 'stake') {
+          balanceUSDT -= (amount + feeAmount);
+        }
+      }
+    }
+
+    balanceETH = Math.max(0, balanceETH);
+    balanceUSDT = Math.max(0, balanceUSDT);
+
     res.json({
       token,
       user: {
         id: user._id,
         walletAddress: user.walletAddress,
-        balanceETH: user.balanceETH,
-        balanceUSDT: user.balanceUSDT,
+        balanceETH,
+        balanceUSDT,
       },
     });
   } catch (error) {
@@ -123,12 +163,51 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Calculer le solde dynamiquement à partir des transactions
+    const transactions = await Transaction.find({
+      userId: req.userId,
+      status: 'completed',
+    });
+
+    let balanceETH = 0;
+    let balanceUSDT = 0;
+
+    for (const tx of transactions) {
+      const amount = tx.amount || 0;
+      const feeAmount = tx.feeAmount || 0;
+      
+      if (tx.currency === 'ETH') {
+        if (tx.type === 'deposit') {
+          balanceETH += amount;
+        } else if (tx.type === 'win') {
+          balanceETH += amount;
+        } else if (tx.type === 'withdrawal') {
+          balanceETH -= (amount + feeAmount);
+        } else if (tx.type === 'stake') {
+          balanceETH -= (amount + feeAmount);
+        }
+      } else if (tx.currency === 'USDT') {
+        if (tx.type === 'deposit') {
+          balanceUSDT += amount;
+        } else if (tx.type === 'win') {
+          balanceUSDT += amount;
+        } else if (tx.type === 'withdrawal') {
+          balanceUSDT -= (amount + feeAmount);
+        } else if (tx.type === 'stake') {
+          balanceUSDT -= (amount + feeAmount);
+        }
+      }
+    }
+
+    balanceETH = Math.max(0, balanceETH);
+    balanceUSDT = Math.max(0, balanceUSDT);
+
     res.json({
       user: {
         id: user._id,
         walletAddress: user.walletAddress,
-        balanceETH: user.balanceETH,
-        balanceUSDT: user.balanceUSDT,
+        balanceETH,
+        balanceUSDT,
       },
     });
   } catch (error) {

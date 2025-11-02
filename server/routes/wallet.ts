@@ -13,6 +13,8 @@ router.use(authenticate);
 /**
  * GET /api/wallet/balance
  * Récupère la balance de l'utilisateur
+ * Le solde est calculé dynamiquement à partir des transactions : dépôts + gains - retraits
+ * Note: Les gains incluent déjà les wins des batailles gagnées
  */
 router.get('/balance', async (req: AuthRequest, res: Response) => {
   try {
@@ -22,9 +24,64 @@ router.get('/balance', async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Récupérer toutes les transactions complétées de l'utilisateur
+    // On inclut les stakes aussi pour calculer correctement le solde
+    // car les wins représentent le montant total gagné (inclut les 2 mises)
+    // et les stakes représentent les mises individuelles
+    const transactions = await Transaction.find({
+      userId: req.userId,
+      status: 'completed',
+    });
+
+    // Calculer le solde ETH à partir des transactions
+    let balanceETH = 0;
+    // Calculer le solde USDT à partir des transactions
+    let balanceUSDT = 0;
+
+    for (const tx of transactions) {
+      const amount = tx.amount || 0;
+      const feeAmount = tx.feeAmount || 0;
+      
+      if (tx.currency === 'ETH') {
+        if (tx.type === 'deposit') {
+          // Les dépôts créditent le montant après frais (amount est déjà le montant net crédité)
+          balanceETH += amount;
+        } else if (tx.type === 'win') {
+          // Les gains créditent le montant total gagné (inclut déjà les 2 mises de la bataille)
+          balanceETH += amount;
+        } else if (tx.type === 'withdrawal') {
+          // Les retraits débitent : montant retiré + frais
+          balanceETH -= (amount + feeAmount);
+        } else if (tx.type === 'stake') {
+          // Les stakes débitent : montant parié + frais
+          // Note: Les wins créditent déjà le montant total (2x mise), donc on doit soustraire les stakes
+          balanceETH -= (amount + feeAmount);
+        }
+      } else if (tx.currency === 'USDT') {
+        if (tx.type === 'deposit') {
+          // Les dépôts créditent le montant après frais (amount est déjà le montant net crédité)
+          balanceUSDT += amount;
+        } else if (tx.type === 'win') {
+          // Les gains créditent le montant total gagné (inclut déjà les 2 mises de la bataille)
+          balanceUSDT += amount;
+        } else if (tx.type === 'withdrawal') {
+          // Les retraits débitent : montant retiré + frais
+          balanceUSDT -= (amount + feeAmount);
+        } else if (tx.type === 'stake') {
+          // Les stakes débitent : montant parié + frais
+          // Note: Les wins créditent déjà le montant total (2x mise), donc on doit soustraire les stakes
+          balanceUSDT -= (amount + feeAmount);
+        }
+      }
+    }
+
+    // S'assurer que les soldes ne sont pas négatifs (pour éviter les erreurs)
+    balanceETH = Math.max(0, balanceETH);
+    balanceUSDT = Math.max(0, balanceUSDT);
+
     res.json({
-      balanceETH: user.balanceETH,
-      balanceUSDT: user.balanceUSDT,
+      balanceETH,
+      balanceUSDT,
     });
   } catch (error) {
     console.error('Balance error:', error);
@@ -181,8 +238,47 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Calculer le solde dynamiquement à partir des transactions
+    const transactions = await Transaction.find({
+      userId: req.userId,
+      status: 'completed',
+    });
+
+    let balanceETH = 0;
+    let balanceUSDT = 0;
+
+    for (const tx of transactions) {
+      const txAmount = tx.amount || 0;
+      const txFeeAmount = tx.feeAmount || 0;
+      
+      if (tx.currency === 'ETH') {
+        if (tx.type === 'deposit') {
+          balanceETH += txAmount;
+        } else if (tx.type === 'win') {
+          balanceETH += txAmount;
+        } else if (tx.type === 'withdrawal') {
+          balanceETH -= (txAmount + txFeeAmount);
+        } else if (tx.type === 'stake') {
+          balanceETH -= (txAmount + txFeeAmount);
+        }
+      } else if (tx.currency === 'USDT') {
+        if (tx.type === 'deposit') {
+          balanceUSDT += txAmount;
+        } else if (tx.type === 'win') {
+          balanceUSDT += txAmount;
+        } else if (tx.type === 'withdrawal') {
+          balanceUSDT -= (txAmount + txFeeAmount);
+        } else if (tx.type === 'stake') {
+          balanceUSDT -= (txAmount + txFeeAmount);
+        }
+      }
+    }
+
+    balanceETH = Math.max(0, balanceETH);
+    balanceUSDT = Math.max(0, balanceUSDT);
+
     // Vérifier la balance
-    const balance = currency === 'ETH' ? user.balanceETH : user.balanceUSDT;
+    const balance = currency === 'ETH' ? balanceETH : balanceUSDT;
     
     // Calculer les frais de 5% sur le retrait
     const withdrawalFee = amount * 0.05;
@@ -198,7 +294,7 @@ router.post('/withdraw', async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Débiter le compte utilisateur
+    // Mettre à jour le balance de l'utilisateur pour compatibilité
     if (currency === 'ETH') {
       user.balanceETH -= totalRequired;
     } else {

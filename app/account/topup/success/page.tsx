@@ -11,7 +11,7 @@ export default function TopupSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useWallet();
-  const [balance, setBalance] = useState<{ balanceETH: number; balanceUSDT: number } | null>(null); // balanceUSDT kept for API compatibility
+  const [balance, setBalance] = useState<{ balanceETH: number; balanceUSDT: number } | null>(null);
 
   const amount = parseFloat(searchParams.get("amount") || "0");
   const txHash = searchParams.get("txHash") || "";

@@ -158,3 +158,8 @@ btcwarfare/
 ## 📝 License
 
 MIT
+
+### TODO
+
+- Déployer en prod
+- Mettre en place des comptes robots qui ont 10 ETH (pour faire large) en base, et qui pourrant jouer en permanence en SHORT comme en LONG pour simuler des joueurs.

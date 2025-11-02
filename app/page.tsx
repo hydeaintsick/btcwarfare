@@ -6,7 +6,7 @@ import { useWallet } from "@/hooks/useWallet";
 
 export default function Home() {
   const { isConnected } = useWallet();
-  const currencySymbol = "ETH"; // Platform 100% ETH
+  const currencySymbol = "ETH"; // ETH or USDT depending on user choice
 
   return (
     <main className="min-h-screen animated-gradient relative overflow-hidden">

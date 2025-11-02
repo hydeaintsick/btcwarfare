@@ -16,6 +16,7 @@ export default function AccountLayout({
   const pathname = usePathname();
   const { isConnected, isConnecting, user } = useWallet();
   const [balanceETH, setBalanceETH] = useState<number>(0);
+  const [balanceUSDT, setBalanceUSDT] = useState<number>(0);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // Marquer qu'on a vérifié l'auth une fois que le check est terminé
@@ -31,12 +32,14 @@ export default function AccountLayout({
         try {
           const balance = await apiClient.getBalance();
           setBalanceETH(balance.balanceETH);
+          setBalanceUSDT(balance.balanceUSDT);
         } catch {
           setBalanceETH(user.balanceETH || 0);
+          setBalanceUSDT(user.balanceUSDT || 0);
         }
       }
     };
-    
+
     refreshBalance();
     const interval = setInterval(refreshBalance, 5000);
     return () => clearInterval(interval);
@@ -55,9 +58,7 @@ export default function AccountLayout({
       <main className="min-h-screen animated-gradient">
         <div className="container mx-auto px-4 py-16">
           <div className="glass-strong rounded-xl p-8 max-w-2xl mx-auto text-center">
-            <p className="text-xl text-gray-300 mb-4">
-              Loading...
-            </p>
+            <p className="text-xl text-gray-300 mb-4">Loading...</p>
           </div>
         </div>
       </main>
@@ -105,7 +106,11 @@ export default function AccountLayout({
                 {/* Balance Summary */}
                 <div className="pb-4 mb-4 border-b border-white/10">
                   <div className="text-xs text-gray-400 mb-2">ETH Balance</div>
-                  <div className="text-lg font-bold neon-cyan">{balanceETH.toFixed(6)} ETH</div>
+                  <div className="text-lg font-bold neon-cyan">
+                    {balanceETH.toFixed(6)} ETH
+                  </div>
+                  {/* <div className="text-xs text-gray-400 mt-2 mb-2">USDT Balance</div>
+                  <div className="text-lg font-bold neon-pink">{balanceUSDT.toFixed(2)} USDT</div> */}
                 </div>
 
                 {/* Menu Items */}
@@ -153,4 +158,3 @@ export default function AccountLayout({
     </main>
   );
 }
-

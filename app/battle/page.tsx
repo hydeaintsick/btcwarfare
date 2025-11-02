@@ -15,7 +15,7 @@ import {
 export default function BattlePage() {
   const { isConnected, address } = useWallet();
   const [selectedPosition, setSelectedPosition] = useState<"long" | "short" | null>(null);
-  const selectedCurrency = "ETH" as const; // Plateforme 100% ETH
+  const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
 
   const { priceUSD: currentBTCPrice } = useCurrentBTCPrice();
   const { battle } = useCurrentBattle();
@@ -165,6 +165,29 @@ export default function BattlePage() {
                     Stake: <span className="font-bold neon-cyan">0.0015 {selectedCurrency}</span>
                   </p>
                   
+                  {/* Currency Selection */}
+                  <div className="mb-6 flex justify-center gap-4">
+                    <button
+                      onClick={() => setSelectedCurrency("ETH")}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        selectedCurrency === "ETH"
+                          ? "bg-neon-cyan text-black"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      ETH
+                    </button>
+                    <button
+                      onClick={() => setSelectedCurrency("USDT")}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        selectedCurrency === "USDT"
+                          ? "bg-neon-cyan text-black"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      USDT
+                    </button>
+                  </div>
 
                   <p className="text-sm text-gray-400 mb-8">
                     You will be automatically matched with an opposite opponent

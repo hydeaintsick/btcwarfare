@@ -111,6 +111,17 @@ export function useWallet() {
     localStorage.removeItem('auth_token');
   };
 
+  const refreshUser = async () => {
+    try {
+      const { user: userData } = await apiClient.getMe();
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+      return null;
+    }
+  };
+
   const sendTransaction = async (
     to: string,
     amount: number,
@@ -168,6 +179,7 @@ export function useWallet() {
     connect,
     disconnect,
     sendTransaction,
+    refreshUser,
     address: user?.walletAddress || null,
   };
 }
