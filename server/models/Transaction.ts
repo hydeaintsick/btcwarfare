@@ -24,6 +24,7 @@ export interface ITransaction extends Document {
     | "refunded";
   relatedBattleId?: Types.ObjectId;
   feeAmount?: number; // For deposits, withdrawals, and stakes, this is the 5% platform fee
+  rejectionReason?: string; // Reason for rejection (when status is 'rejected')
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +76,10 @@ const TransactionSchema: Schema = new Schema(
     feeAmount: {
       type: Number,
       min: 0,
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
     },
   },
   {

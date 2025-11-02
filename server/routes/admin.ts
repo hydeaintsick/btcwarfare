@@ -7,6 +7,7 @@ import {
 } from "../middleware/adminAuth";
 import adminService from "../services/adminService";
 import Transaction from "../models/Transaction";
+import User from "../models/User";
 import blockchainService from "../services/blockchainService";
 import { ethers } from "ethers";
 
@@ -314,21 +315,47 @@ router.post(
 
       // Restaurer le balance de l'utilisateur (rembourser le montant débité)
       // amount contient maintenant le montant total débité (incluant les frais)
-      const user = withdrawal.userId as any;
+      const userId = withdrawal.userId as any;
+      const user = await User.findById(userId);
+
       if (user) {
         const totalAmount = withdrawal.amount || 0; // Montant total débité (incluant les frais)
 
         if (withdrawal.currency === "ETH") {
-          user.balanceETH += totalAmount;
+          const currentBalance = Number(user.balanceETH) || 0;
+          user.balanceETH = currentBalance + totalAmount;
         } else {
-          user.balanceUSDT += totalAmount;
+          const currentBalance = Number(user.balanceUSDT) || 0;
+          user.balanceUSDT = currentBalance + totalAmount;
         }
         await user.save();
       }
 
       // Marquer le retrait comme rejected (rejeté par l'admin)
       withdrawal.status = "rejected";
+      withdrawal.rejectionReason = reason || "Rejected by admin";
       await withdrawal.save();
+
+      // Trouver et marquer la transaction de fee associée comme refunded
+      const feeAmount = withdrawal.feeAmount || 0;
+      if (feeAmount > 0) {
+        const feeTransaction = await Transaction.findOne({
+          userId: withdrawal.userId,
+          type: "fee",
+          amount: feeAmount,
+          currency: withdrawal.currency,
+          status: "completed",
+          createdAt: {
+            $gte: new Date(withdrawal.createdAt.getTime() - 60000), // Dans les 60 secondes après le withdrawal
+            $lte: new Date(withdrawal.createdAt.getTime() + 60000),
+          },
+        }).sort({ createdAt: -1 }); // Prendre la plus récente
+
+        if (feeTransaction) {
+          feeTransaction.status = "refunded";
+          await feeTransaction.save();
+        }
+      }
 
       res.json({
         message: "Withdrawal rejected",

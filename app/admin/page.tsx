@@ -151,6 +151,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   } = useWithdrawals();
 
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const handleApprove = async (id: string) => {
     if (!confirm("Are you sure you want to approve this withdrawal?")) return;
@@ -166,19 +169,33 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const handleReject = async (id: string) => {
-    const reason = prompt("Enter rejection reason (optional):");
-    if (reason === null) return; // User cancelled
+  const handleRejectClick = (id: string) => {
+    setRejectingId(id);
+    setRejectionReason("");
+    setRejectModalOpen(true);
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectingId) return;
     
     try {
-      setProcessingId(id);
-      await rejectWithdrawal(id, reason || undefined);
+      setProcessingId(rejectingId);
+      await rejectWithdrawal(rejectingId, rejectionReason.trim() || undefined);
+      setRejectModalOpen(false);
+      setRejectingId(null);
+      setRejectionReason("");
       alert("Withdrawal rejected successfully!");
     } catch (error: any) {
       alert(`Error: ${error.message || "Failed to reject withdrawal"}`);
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const handleRejectCancel = () => {
+    setRejectModalOpen(false);
+    setRejectingId(null);
+    setRejectionReason("");
   };
 
   return (
@@ -517,7 +534,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             {processingId === withdrawal.id ? "Processing..." : "Approve"}
                           </button>
                           <button
-                            onClick={() => handleReject(withdrawal.id)}
+                            onClick={() => handleRejectClick(withdrawal.id)}
                             disabled={processingId === withdrawal.id}
                             className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -531,6 +548,61 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* Reject Modal */}
+        {rejectModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={handleRejectCancel}
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative z-10 glass-strong rounded-xl p-6 max-w-md w-full border border-red-500/30"
+            >
+              <h3 className="text-2xl font-bold mb-4 neon-text text-red-400">
+                Reject Withdrawal
+              </h3>
+              
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to reject this withdrawal request?
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Rejection Reason (Optional)
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter the reason for rejection..."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none"
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRejectCancel}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectConfirm}
+                  disabled={processingId === rejectingId}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingId === rejectingId ? "Rejecting..." : "Confirm Reject"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </div>
     </main>

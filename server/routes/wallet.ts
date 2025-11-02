@@ -435,6 +435,7 @@ router.get('/transactions', async (req: AuthRequest, res: Response) => {
         status: tx.status,
         txHash: tx.txHash,
         relatedBattleId: tx.relatedBattleId,
+        rejectionReason: tx.rejectionReason,
         createdAt: tx.createdAt,
         updatedAt: tx.updatedAt,
       })),

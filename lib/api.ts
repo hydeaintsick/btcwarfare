@@ -174,6 +174,7 @@ class ApiClient {
         status: string;
         txHash?: string;
         relatedBattleId?: string;
+        rejectionReason?: string;
         createdAt: string;
         updatedAt: string;
       }>;
