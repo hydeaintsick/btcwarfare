@@ -41,31 +41,29 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Neon text effects */
+/* Neon text effects - Reduced glow for better readability */
 .neon-text {
-  text-shadow: 
-    0 0 5px currentColor,
-    0 0 10px currentColor,
-    0 0 15px currentColor,
-    0 0 20px currentColor;
+  /* Subtle shadow for depth without overwhelming */
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 .neon-cyan {
   color: #00ffff;
-  text-shadow: 
-    0 0 5px #00ffff,
-    0 0 10px #00ffff,
-    0 0 15px #00ffff,
-    0 0 20px #00ffff;
+  /* Reduced glow - just a subtle shadow */
+  text-shadow: 0 0 2px rgba(0, 255, 255, 0.5);
 }
 
 .neon-pink {
   color: #ff00ff;
+  /* Reduced glow - just a subtle shadow */
+  text-shadow: 0 0 2px rgba(255, 0, 255, 0.5);
+}
+
+/* Stronger glow variant for special elements (buttons, badges) - not for titles */
+.neon-text-strong {
   text-shadow: 
-    0 0 5px #ff00ff,
-    0 0 10px #ff00ff,
-    0 0 15px #ff00ff,
-    0 0 20px #ff00ff;
+    0 0 5px currentColor,
+    0 0 10px currentColor;
 }
 
 /* Glow effects */

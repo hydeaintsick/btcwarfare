@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 
 export function BattlePreview() {
   const [timeRemaining, setTimeRemaining] = useState(45); // 45 secondes restantes pour l'exemple
+  const [longPercentage, setLongPercentage] = useState(70); // Pourcentage dynamique
 
   useEffect(() => {
     // Animation du countdown (décrémente lentement pour la démo)
@@ -18,17 +19,32 @@ export function BattlePreview() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    // Simuler l'évolution dynamique du pourcentage au fil du temps
+    // Le pourcentage varie entre 60% et 80% pour le joueur bleu (gagnant)
+    const variationInterval = setInterval(() => {
+      setLongPercentage((prev) => {
+        // Variation entre 60% et 80%
+        const min = 60;
+        const max = 80;
+        // Variation aléatoire mais avec tendance à augmenter
+        const change = (Math.random() - 0.3) * 4; // Légèrement biaisé vers le positif
+        const newValue = Math.max(min, Math.min(max, prev + change));
+        return Math.round(newValue * 10) / 10; // Arrondir à 1 décimale
+      });
+    }, 2000); // Change toutes les 2 secondes
+
+    return () => clearInterval(variationInterval);
+  }, []);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Mockup data - Long player winning (70%)
-  const longPercentage = 70;
-  const shortPercentage = 30;
-  const longPower = longPercentage;
-  const shortPower = shortPercentage;
+  // Calculer le pourcentage short (complément à 100%)
+  const shortPercentage = Math.round((100 - longPercentage) * 10) / 10;
 
   return (
     <motion.div
@@ -61,70 +77,61 @@ export function BattlePreview() {
           </div>
         </div>
 
-        {/* Players */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Long Player (Blue) */}
-          <div className="glass rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
+        {/* Unified Battle Bar */}
+        <div className="glass rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-neon-cyan animate-pulse"></div>
-                <span className="font-bold text-sm">Long Player</span>
+                <span className="font-bold text-sm neon-cyan">Long</span>
               </div>
-              <span className="text-xs text-gray-400">📈</span>
-            </div>
-            <div className="mb-2">
-              <div className="text-xs text-gray-400 mb-1">Power</div>
-              <div className="text-2xl font-bold neon-cyan">{longPower}%</div>
-            </div>
-            {/* Jauge Long */}
-            <div className="relative h-8 bg-gray-900 rounded-full overflow-hidden border border-gray-700">
-              <motion.div
-                className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-full relative"
-                initial={{ width: 0 }}
-                animate={{ width: `${longPercentage}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-              >
-                <div className="absolute inset-0 bg-neon-cyan opacity-30 blur-sm"></div>
-                <div className="absolute right-0 top-0 h-full w-1 bg-white opacity-50"></div>
-              </motion.div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xs font-bold text-white z-10">
-                  {longPercentage}%
-                </span>
+              <span className="text-gray-500">VS</span>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-neon-pink animate-pulse"></div>
+                <span className="font-bold text-sm neon-pink">Short</span>
               </div>
             </div>
           </div>
 
-          {/* Short Player (Purple) */}
-          <div className="glass rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-neon-pink animate-pulse"></div>
-                <span className="font-bold text-sm">Short Player</span>
-              </div>
-              <span className="text-xs text-gray-400">📉</span>
-            </div>
-            <div className="mb-2">
-              <div className="text-xs text-gray-400 mb-1">Power</div>
-              <div className="text-2xl font-bold neon-pink">{shortPower}%</div>
-            </div>
-            {/* Jauge Short */}
-            <div className="relative h-8 bg-gray-900 rounded-full overflow-hidden border border-gray-700">
-              <motion.div
-                className="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full relative"
-                initial={{ width: 0 }}
-                animate={{ width: `${shortPercentage}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
+          {/* Single Unified Bar */}
+          <div className="relative h-16 bg-gray-900 rounded-full overflow-hidden border-2 border-gray-700">
+            {/* Blue side (Left) - You */}
+            <motion.div
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-cyan-500 flex items-center justify-end pr-4 z-10"
+              initial={{ width: "0%" }}
+              animate={{ width: `${longPercentage}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              <div className="absolute inset-0 bg-neon-cyan opacity-20 blur-sm"></div>
+              <motion.span
+                key={longPercentage}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                className="text-lg font-bold text-white z-20 drop-shadow-lg"
               >
-                <div className="absolute inset-0 bg-neon-pink opacity-30 blur-sm"></div>
-                <div className="absolute right-0 top-0 h-full w-1 bg-white opacity-50"></div>
-              </motion.div>
-              <div className="absolute inset-0 flex items-center justify-start pl-2">
-                <span className="text-xs font-bold text-white z-10">
-                  {shortPercentage}%
-                </span>
-              </div>
-            </div>
+                {longPercentage.toFixed(1)}%
+              </motion.span>
+              {/* Separator line */}
+              <div className="absolute right-0 top-0 h-full w-0.5 bg-white/40 shadow-lg"></div>
+            </motion.div>
+
+            {/* Purple side (Right) - Opponent */}
+            <motion.div
+              className="absolute right-0 top-0 h-full bg-gradient-to-l from-purple-600 via-pink-500 to-purple-600 flex items-center justify-start pl-4 z-10"
+              initial={{ width: "0%" }}
+              animate={{ width: `${shortPercentage}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              <div className="absolute inset-0 bg-neon-pink opacity-20 blur-sm"></div>
+              <motion.span
+                key={shortPercentage}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                className="text-lg font-bold text-white z-20 drop-shadow-lg"
+              >
+                {shortPercentage.toFixed(1)}%
+              </motion.span>
+            </motion.div>
           </div>
         </div>
 
@@ -150,12 +157,19 @@ export function BattlePreview() {
           animate={{ opacity: 1, y: 0 }}
           className="mt-6 text-center"
         >
-          <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-2">
-            <span className="text-lg">🏆</span>
-            <span className="text-sm font-bold neon-cyan">
-              Long is winning!
-            </span>
-          </div>
+          {longPercentage > 50 && (
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
+              className="inline-flex items-center gap-2 glass rounded-full px-6 py-3 animate-glow-pulse"
+            >
+              <span className="text-xl">🏆</span>
+              <span className="text-base font-bold neon-cyan">
+                You are winning!
+              </span>
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </motion.div>
