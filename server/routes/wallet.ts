@@ -413,11 +413,13 @@ router.get('/pending-deposits', async (req: AuthRequest, res: Response) => {
 /**
  * GET /api/wallet/transactions
  * Historique complet des transactions de l'utilisateur
+ * Note: Les transactions de type 'fee' sont exclues car elles sont déjà visibles via feeAmount
  */
 router.get('/transactions', async (req: AuthRequest, res: Response) => {
   try {
     const transactions = await Transaction.find({
       userId: req.userId,
+      type: { $ne: 'fee' }, // Exclure les transactions de fee
     })
       .sort({ createdAt: -1 })
       .limit(100)
@@ -479,9 +481,31 @@ router.post('/withdraw/:id/cancel', async (req: AuthRequest, res: Response) => {
     }
     await user.save();
 
-    // Marquer le withdrawal comme failed (annulé)
-    withdrawal.status = 'failed';
+    // Marquer le withdrawal comme canceled (annulé par l'utilisateur)
+    withdrawal.status = 'canceled';
     await withdrawal.save();
+
+    // Trouver et marquer la transaction de fee associée comme refunded
+    // La transaction de fee est créée en même temps que le withdrawal avec le même feeAmount
+    const feeAmount = withdrawal.feeAmount || 0;
+    if (feeAmount > 0) {
+      const feeTransaction = await Transaction.findOne({
+        userId: req.userId,
+        type: 'fee',
+        amount: feeAmount,
+        currency: withdrawal.currency,
+        status: 'completed',
+        createdAt: {
+          $gte: new Date(withdrawal.createdAt.getTime() - 60000), // Dans les 60 secondes après le withdrawal
+          $lte: new Date(withdrawal.createdAt.getTime() + 60000),
+        },
+      }).sort({ createdAt: -1 }); // Prendre la plus récente
+
+      if (feeTransaction) {
+        feeTransaction.status = 'refunded';
+        await feeTransaction.save();
+      }
+    }
 
     res.json({
       message: 'Withdrawal cancelled successfully',

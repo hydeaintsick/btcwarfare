@@ -15,7 +15,13 @@ export interface ITransaction extends Document {
   amount: number;
   currency: "ETH" | "USDT";
   txHash?: string;
-  status: "pending" | "completed" | "failed";
+  status:
+    | "pending"
+    | "completed"
+    | "failed"
+    | "canceled"
+    | "rejected"
+    | "refunded";
   relatedBattleId?: Types.ObjectId;
   feeAmount?: number; // For deposits, withdrawals, and stakes, this is the 5% platform fee
   createdAt: Date;
@@ -52,7 +58,14 @@ const TransactionSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "completed", "failed"],
+      enum: [
+        "pending",
+        "completed",
+        "failed",
+        "canceled",
+        "rejected",
+        "refunded",
+      ],
       default: "pending",
     },
     relatedBattleId: {

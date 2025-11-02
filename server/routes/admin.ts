@@ -326,8 +326,8 @@ router.post(
         await user.save();
       }
 
-      // Marquer le retrait comme failed
-      withdrawal.status = "failed";
+      // Marquer le retrait comme rejected (rejeté par l'admin)
+      withdrawal.status = "rejected";
       await withdrawal.save();
 
       res.json({
