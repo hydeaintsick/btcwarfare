@@ -1,13 +1,11 @@
 "use client";
 
-import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { formatAddress } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useWallet } from "@/hooks/useWallet";
 
 export function WalletConnect() {
-  const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { address, isConnected, isConnecting, connect, disconnect } = useWallet();
 
   if (isConnected && address) {
     return (
@@ -36,18 +34,14 @@ export function WalletConnect() {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex gap-3"
     >
-      {connectors.map((connector) => (
-        <button
-          key={connector.uid}
-          onClick={() => connect({ connector })}
-          className="px-6 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan"
-        >
-          Connecter {connector.name}
-        </button>
-      ))}
+      <button
+        onClick={() => connect()}
+        disabled={isConnecting}
+        className="px-6 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isConnecting ? 'Connexion...' : 'Connecter Wallet'}
+      </button>
     </motion.div>
   );
 }
-

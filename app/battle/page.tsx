@@ -1,61 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useAccount } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
 import { Countdown } from "@/components/Countdown";
-import { BattleCard } from "@/components/BattleCard";
-import { BattleCardWrapper } from "@/components/BattleCardWrapper";
+import { useWallet } from "@/hooks/useWallet";
 import {
-  useBTCWarfare,
-  useBattle,
-  usePlayerBattles,
-  useIsInQueue,
   useCurrentBTCPrice,
+  useCurrentBattle,
+  useBattleHistory,
+  useBattleActions,
   BATTLE_DURATION,
-} from "@/hooks/useContract";
-import { formatEther } from "viem";
+} from "@/hooks/useAPI";
 
 export default function BattlePage() {
-  const { address, isConnected } = useAccount();
+  const { isConnected, address } = useWallet();
   const [selectedPosition, setSelectedPosition] = useState<"long" | "short" | null>(null);
-  const [currentBattleId, setCurrentBattleId] = useState<bigint | undefined>(undefined);
+  const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
 
-  const { enterRoom, resolveBattle, hash, isPending, isConfirming, isConfirmed } =
-    useBTCWarfare();
-  const { battle } = useBattle(currentBattleId);
-  const { battleIds } = usePlayerBattles(address);
-  const { inQueue: isLongInQueue } = useIsInQueue(address, true);
-  const { inQueue: isShortInQueue } = useIsInQueue(address, false);
   const { priceUSD: currentBTCPrice } = useCurrentBTCPrice();
-
-  const inQueue = isLongInQueue || isShortInQueue;
-  const queuePosition = isLongInQueue ? "long" : isShortInQueue ? "short" : null;
-
-  // Mettre à jour la battle actuelle si une nouvelle battle est créée
-  useEffect(() => {
-    if (battleIds && battleIds.length > 0) {
-      // Prendre la dernière battle (la plus récente)
-      const latestBattleId = battleIds[battleIds.length - 1];
-      if (!currentBattleId || latestBattleId !== currentBattleId) {
-        setCurrentBattleId(latestBattleId);
-      }
-    }
-  }, [battleIds, currentBattleId]);
-
-  // Écouter les événements de battle créée
-  useEffect(() => {
-    if (isConfirmed && hash && !currentBattleId) {
-      // Attendre un peu pour que la battle soit créée
-      setTimeout(() => {
-        if (battleIds && battleIds.length > 0) {
-          setCurrentBattleId(battleIds[battleIds.length - 1]);
-        }
-      }, 2000);
-    }
-  }, [isConfirmed, hash, battleIds, currentBattleId]);
+  const { battle } = useCurrentBattle();
+  const { battles: battleHistory } = useBattleHistory();
+  const { enterBattle, resolveBattle, isPending } = useBattleActions();
 
   const handleEnterRoom = async (isLong: boolean) => {
     if (!isConnected) {
@@ -65,7 +32,8 @@ export default function BattlePage() {
 
     try {
       setSelectedPosition(isLong ? "long" : "short");
-      await enterRoom(isLong);
+      await enterBattle(isLong ? "long" : "short", selectedCurrency);
+      setSelectedPosition(null);
     } catch (error: any) {
       console.error("Error entering room:", error);
       alert(error?.message || "Erreur lors de l'entrée dans la room");
@@ -73,7 +41,7 @@ export default function BattlePage() {
     }
   };
 
-  const handleResolveBattle = async (battleId: bigint) => {
+  const handleResolveBattle = async (battleId: string) => {
     try {
       await resolveBattle(battleId);
     } catch (error: any) {
@@ -84,7 +52,7 @@ export default function BattlePage() {
 
   // Vérifier si la battle peut être résolue (60 secondes écoulées)
   const canResolve = battle
-    ? Number(battle.startTime) + BATTLE_DURATION <= Math.floor(Date.now() / 1000)
+    ? new Date(battle.startTime).getTime() + BATTLE_DURATION * 1000 <= Date.now()
     : false;
 
   return (
@@ -131,44 +99,69 @@ export default function BattlePage() {
             )}
 
             {/* Battle en cours */}
-            {battle && battle.longPlayer !== "0x0000000000000000000000000000000000000000" && (
+            {battle && battle.status === "active" && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="max-w-4xl mx-auto mb-8"
               >
-                <BattleCard
-                  battleId={currentBattleId!}
-                  longPlayer={battle.longPlayer as `0x${string}`}
-                  shortPlayer={battle.shortPlayer as `0x${string}`}
-                  startPrice={battle.startPrice}
-                  startTime={battle.startTime}
-                  currentPrice={currentBTCPrice ? BigInt(Math.floor(currentBTCPrice * 1e8)) : undefined}
-                  stakeAmount={battle.stakeAmount}
-                  resolved={battle.resolved}
-                  winner={battle.winner as `0x${string}` | undefined}
-                  onResolve={canResolve && !battle.resolved ? handleResolveBattle : undefined}
-                />
-
-                {!battle.resolved && (
-                  <div className="mt-8">
-                    <Countdown
-                      startTime={battle.startTime}
-                      duration={BATTLE_DURATION}
-                      onComplete={() => {
-                        // Auto-résoudre si le joueur est dans la battle
-                        if (canResolve && !battle.resolved) {
-                          handleResolveBattle(currentBattleId!);
-                        }
-                      }}
-                    />
+                <div className="glass-strong rounded-xl p-8">
+                  <h2 className="text-2xl font-bold mb-6 neon-text">Battle en cours</h2>
+                  
+                  <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <div className="glass rounded-lg p-4">
+                      <div className="text-sm text-gray-400 mb-1">Long Player</div>
+                      <div className="font-bold neon-cyan">{battle.longPlayer.address}</div>
+                    </div>
+                    <div className="glass rounded-lg p-4">
+                      <div className="text-sm text-gray-400 mb-1">Short Player</div>
+                      <div className="font-bold neon-pink">{battle.shortPlayer.address}</div>
+                    </div>
                   </div>
-                )}
+
+                  <div className="grid md:grid-cols-3 gap-4 mb-6">
+                    <div className="glass rounded-lg p-4 text-center">
+                      <div className="text-sm text-gray-400 mb-1">Prix de départ</div>
+                      <div className="font-bold">${battle.startPrice?.toFixed(2)}</div>
+                    </div>
+                    <div className="glass rounded-lg p-4 text-center">
+                      <div className="text-sm text-gray-400 mb-1">Mise</div>
+                      <div className="font-bold">{battle.stakeAmount} {battle.currency}</div>
+                    </div>
+                    <div className="glass rounded-lg p-4 text-center">
+                      <div className="text-sm text-gray-400 mb-1">Prix actuel</div>
+                      <div className="font-bold">${currentBTCPrice?.toFixed(2) || "..."}</div>
+                    </div>
+                  </div>
+
+                  {!battle.resolved && (
+                    <div className="mt-6">
+                      <Countdown
+                        startTime={new Date(battle.startTime).getTime() / 1000}
+                        duration={BATTLE_DURATION}
+                        onComplete={() => {
+                          if (canResolve && !battle.resolved) {
+                            handleResolveBattle(battle.id);
+                          }
+                        }}
+                      />
+                      {canResolve && (
+                        <button
+                          onClick={() => handleResolveBattle(battle.id)}
+                          disabled={isPending}
+                          className="w-full mt-4 py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isPending ? "Résolution..." : "Résoudre la battle"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
             {/* Interface de sélection Long/Short */}
-            {!battle && !inQueue && (
+            {(!battle || battle.status !== "active") && (
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -178,9 +171,34 @@ export default function BattlePage() {
                   <h2 className="text-3xl font-bold mb-4 neon-text">
                     Choisissez votre <span className="neon-cyan">position</span>
                   </h2>
-                  <p className="text-gray-300 mb-8">
-                    Mise: <span className="font-bold neon-cyan">0.0015 ETH</span>
+                  <p className="text-gray-300 mb-4">
+                    Mise: <span className="font-bold neon-cyan">0.0015 {selectedCurrency}</span>
                   </p>
+                  
+                  {/* Sélection devise */}
+                  <div className="mb-6 flex justify-center gap-4">
+                    <button
+                      onClick={() => setSelectedCurrency("ETH")}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        selectedCurrency === "ETH"
+                          ? "bg-neon-cyan text-black"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      ETH
+                    </button>
+                    <button
+                      onClick={() => setSelectedCurrency("USDT")}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        selectedCurrency === "USDT"
+                          ? "bg-neon-cyan text-black"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      USDT
+                    </button>
+                  </div>
+
                   <p className="text-sm text-gray-400 mb-8">
                     Vous serez automatiquement matché avec un adversaire opposé
                   </p>
@@ -199,10 +217,10 @@ export default function BattlePage() {
                         Vous pariez que le prix va monter
                       </p>
                       <button
-                        disabled={isPending || isConfirming}
+                        disabled={isPending || selectedPosition === "long"}
                         className="w-full py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isPending || isConfirming ? "En attente..." : "Entrer en Long"}
+                        {isPending && selectedPosition === "long" ? "En attente..." : "Entrer en Long"}
                       </button>
                     </motion.div>
 
@@ -219,10 +237,10 @@ export default function BattlePage() {
                         Vous pariez que le prix va descendre
                       </p>
                       <button
-                        disabled={isPending || isConfirming}
+                        disabled={isPending || selectedPosition === "short"}
                         className="w-full py-3 bg-neon-pink text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-pink disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isPending || isConfirming ? "En attente..." : "Entrer en Short"}
+                        {isPending && selectedPosition === "short" ? "En attente..." : "Entrer en Short"}
                       </button>
                     </motion.div>
                   </div>
@@ -230,55 +248,40 @@ export default function BattlePage() {
               </motion.div>
             )}
 
-            {/* En attente de matching */}
-            {inQueue && !battle && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="glass-strong rounded-xl p-8 max-w-2xl mx-auto text-center"
-              >
-                <div className="text-6xl mb-4 animate-pulse-neon">⏳</div>
-                <h2 className="text-2xl font-bold neon-text mb-4">
-                  En attente de matching...
-                </h2>
-                <p className="text-gray-300 mb-4">
-                  Position: <span className="font-bold">{queuePosition?.toUpperCase()}</span>
-                </p>
-                <p className="text-sm text-gray-400">
-                  Recherche d&apos;un adversaire opposé...
-                </p>
-                {(isPending || isConfirming) && (
-                  <div className="mt-6">
-                    <div className="text-sm text-gray-400">Transaction en cours...</div>
-                    {hash && (
-                      <div className="text-xs text-gray-500 mt-2 break-all">{hash}</div>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
             {/* Historique des battles */}
-            {battleIds && battleIds.length > 0 && !battle && (
+            {battleHistory && battleHistory.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-12"
               >
                 <h2 className="text-3xl font-bold text-center mb-8 neon-text">
-                  Vos <span className="neon-cyan">Battles</span>
+                  Historique des <span className="neon-cyan">Battles</span>
                 </h2>
                 <div className="grid gap-6 max-w-4xl mx-auto">
-                  {battleIds.map((battleId) => (
-                    <BattleCardWrapper
-                      key={battleId.toString()}
-                      battleId={battleId}
-                      onResolve={
-                        canResolve
-                          ? () => handleResolveBattle(battleId)
-                          : undefined
-                      }
-                    />
+                  {battleHistory.slice(0, 10).map((battleItem: any) => (
+                    <div key={battleItem.id} className="glass-strong rounded-xl p-6">
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div>
+                          <div className="text-sm text-gray-400 mb-1">Status</div>
+                          <div className={`font-bold ${
+                            battleItem.status === "resolved" ? "text-green-400" : "text-yellow-400"
+                          }`}>
+                            {battleItem.status === "resolved" ? "Résolue" : "Active"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-400 mb-1">Mise</div>
+                          <div className="font-bold">{battleItem.stakeAmount} {battleItem.currency}</div>
+                        </div>
+                        {battleItem.winner && (
+                          <div>
+                            <div className="text-sm text-gray-400 mb-1">Gagnant</div>
+                            <div className="font-bold neon-cyan">{battleItem.winner.address}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </motion.div>

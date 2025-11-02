@@ -3,10 +3,11 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { WalletConnect } from "@/components/WalletConnect";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/hooks/useWallet";
 
 export default function Home() {
-  const { isConnected } = useAccount();
+  const { isConnected } = useWallet();
+  const currencySymbol = "ETH"; // ETH ou USDT selon le choix de l'utilisateur
 
   return (
     <main className="min-h-screen animated-gradient relative overflow-hidden">
@@ -76,7 +77,7 @@ export default function Home() {
                 MVP
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold neon-cyan mb-4">0.0015 ETH</div>
+                <div className="text-3xl font-bold neon-cyan mb-4">0.0015 {currencySymbol}</div>
                 <div className="text-gray-300 mb-6">
                   <div className="text-sm opacity-75">Mise de départ</div>
                   <div className="text-lg mt-2">~3.50$</div>
@@ -108,7 +109,7 @@ export default function Home() {
                 Bientôt
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-400 mb-4">0.0030 ETH</div>
+                <div className="text-3xl font-bold text-gray-400 mb-4">0.0030 {currencySymbol}</div>
                 <div className="text-gray-500 mb-6">
                   <div className="text-sm opacity-75">Mise de départ</div>
                   <div className="text-lg mt-2">~7.00$</div>
@@ -131,7 +132,7 @@ export default function Home() {
                 Bientôt
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-400 mb-4">0.015 ETH</div>
+                <div className="text-3xl font-bold text-gray-400 mb-4">0.015 {currencySymbol}</div>
                 <div className="text-gray-500 mb-6">
                   <div className="text-sm opacity-75">Mise de départ</div>
                   <div className="text-lg mt-2">~35.00$</div>
