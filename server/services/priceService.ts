@@ -53,7 +53,7 @@ class PriceService {
 
   /**
    * Récupère le prix BTC/USD avec fallback
-   * Priorité: CoinGecko -> Binance
+   * Priorité: Binance -> CoinGecko
    */
   async getBTCPrice(): Promise<{ price: number; source: string; timestamp: number }> {
     const now = Date.now();
@@ -67,14 +67,14 @@ class PriceService {
       };
     }
 
-    // Essayer CoinGecko d'abord
-    let price = await this.fetchFromCoinGecko();
-    let source = 'coingecko';
+    // Essayer Binance d'abord (plus fiable, moins de rate limits)
+    let price = await this.fetchFromBinance();
+    let source = 'binance';
 
-    // Fallback sur Binance si CoinGecko échoue
+    // Fallback sur CoinGecko si Binance échoue
     if (price === null) {
-      price = await this.fetchFromBinance();
-      source = 'binance';
+      price = await this.fetchFromCoinGecko();
+      source = 'coingecko';
     }
 
     // Si tout échoue, retourner le cache ou une erreur
