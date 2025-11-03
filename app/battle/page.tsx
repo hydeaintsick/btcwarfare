@@ -16,9 +16,16 @@ import {
 } from "@/hooks/useAPI";
 
 export default function BattlePage() {
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, isConnecting, connect } = useWallet();
   const [selectedPosition, setSelectedPosition] = useState<"long" | "short" | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<"ETH" | "USDT">("ETH");
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Forcer un re-render quand isConnected change
+  useEffect(() => {
+    setForceUpdate((prev) => prev + 1);
+  }, [isConnected]);
 
   const { priceUSD: currentBTCPrice } = useCurrentBTCPrice();
   const { battle } = useCurrentBattle();
@@ -138,12 +145,16 @@ export default function BattlePage() {
   }, []);
 
   const handleEnterRoom = async (isLong: boolean) => {
+    console.log("handleEnterRoom called - isConnected:", isConnected, "isLong:", isLong);
+    
     if (!isConnected) {
-      alert("Please connect your wallet");
+      console.log("Not connected, opening modal");
+      setShowConnectModal(true);
       return;
     }
 
     try {
+      console.log("Entering battle...");
       setSelectedPosition(isLong ? "long" : "short");
       await enterBattle(isLong ? "long" : "short", selectedCurrency);
       setSelectedPosition(null);
@@ -153,6 +164,27 @@ export default function BattlePage() {
       setSelectedPosition(null);
     }
   };
+
+  const handleConnect = async () => {
+    try {
+      console.log("Connecting wallet...");
+      await connect();
+      console.log("Wallet connected, isConnected:", isConnected);
+      // Fermer la modal une fois connecté
+      setShowConnectModal(false);
+    } catch (error: any) {
+      console.error("Error connecting wallet:", error);
+    }
+  };
+
+  // Fermer la modal si l'utilisateur se connecte
+  useEffect(() => {
+    console.log("useEffect - isConnected changed to:", isConnected);
+    if (isConnected && showConnectModal) {
+      console.log("Closing modal because connected");
+      setShowConnectModal(false);
+    }
+  }, [isConnected, showConnectModal]);
 
   const handleResolveBattle = async (battleId: string) => {
     try {
@@ -361,10 +393,12 @@ export default function BattlePage() {
                   <div className="lg:col-span-2 flex flex-col gap-6">
                     <BattleChart />
                     <BattleBetting
+                      key={`battle-betting-${isConnected}-${forceUpdate}`}
                       onEnterBattle={handleEnterRoom}
                       isPending={isPending}
                       selectedPosition={selectedPosition}
                       battle={battle}
+                      isConnected={isConnected}
                     />
                   </div>
                   {/* Carnet d'ordres - 1/3 de la largeur */}
@@ -416,6 +450,119 @@ export default function BattlePage() {
           </>
         )}
       </div>
+
+      {/* Connect Modal */}
+      {showConnectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowConnectModal(false)}
+          />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative z-10 glass-strong rounded-xl p-8 max-w-md w-full border-2 border-neon-cyan"
+            style={{
+              boxShadow: "0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.1)",
+            }}
+          >
+            <div className="text-center">
+              {/* Icon */}
+              <div className="mb-6 flex justify-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-pink-500/20 flex items-center justify-center border-2 border-neon-cyan">
+                  <svg
+                    className="w-10 h-10 text-neon-cyan"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h2 className="text-2xl font-bold neon-text mb-3">
+                Connect Your <span className="neon-cyan">Wallet</span>
+              </h2>
+
+              {/* Message */}
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                You must connect your wallet to enter the battle. Connect with MetaMask to get started.
+              </p>
+
+              {/* Connect Button */}
+              <motion.button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="w-full py-4 px-6 bg-gradient-to-r from-neon-cyan to-neon-pink text-black font-bold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden mb-4"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {isConnecting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Connecting...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#F6851B" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#E2761B" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#CD6116" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#E4751F" />
+                    </svg>
+                    Connect with MetaMask
+                  </span>
+                )}
+              </motion.button>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowConnectModal(false)}
+                className="text-sm text-gray-400 hover:text-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </main>
   );
 }

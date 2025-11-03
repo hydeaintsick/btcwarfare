@@ -7,6 +7,7 @@ interface BattleBettingProps {
   isPending: boolean;
   selectedPosition: "long" | "short" | null;
   battle: any | null;
+  isConnected: boolean;
 }
 
 const STAKE_AMOUNT = 0.0015; // ETH
@@ -16,10 +17,17 @@ export function BattleBetting({
   isPending,
   selectedPosition,
   battle,
+  isConnected,
 }: BattleBettingProps) {
   if (battle) {
     return null; // Ne pas afficher si une battle est active
   }
+
+  // Debug: vérifier que isConnected change
+  console.log("BattleBetting render - isConnected:", isConnected);
+
+  const isLongDisabled = isPending || selectedPosition === "long";
+  const isShortDisabled = isPending || selectedPosition === "short";
 
   return (
     <motion.div
@@ -75,22 +83,42 @@ export function BattleBetting({
         <div className="flex gap-3 justify-center mb-4 flex-grow items-end">
           {/* Bouton LONG */}
           <motion.button
-            onClick={() => onEnterBattle(true)}
-            disabled={isPending || selectedPosition === "long"}
-            className="flex-1 py-3 px-4 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("LONG button clicked - isConnected:", isConnected, "isLongDisabled:", isLongDisabled);
+              onEnterBattle(true);
+            }}
+            disabled={isLongDisabled}
+            className={`flex-1 py-3 px-4 bg-neon-cyan text-black font-bold rounded-lg transition-all relative overflow-hidden ${
+              isLongDisabled
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-opacity-90 cursor-pointer active:scale-95"
+            }`}
+            whileHover={!isLongDisabled ? { scale: 1.03 } : {}}
+            whileTap={!isLongDisabled ? { scale: 0.97 } : {}}
           >
             {isPending && selectedPosition === "long" ? "Waiting..." : "LONG"}
           </motion.button>
 
           {/* Bouton SHORT */}
           <motion.button
-            onClick={() => onEnterBattle(false)}
-            disabled={isPending || selectedPosition === "short"}
-            className="flex-1 py-3 px-4 bg-neon-pink text-black font-bold rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("SHORT button clicked - isConnected:", isConnected, "isShortDisabled:", isShortDisabled);
+              onEnterBattle(false);
+            }}
+            disabled={isShortDisabled}
+            className={`flex-1 py-3 px-4 bg-neon-pink text-black font-bold rounded-lg transition-all relative overflow-hidden ${
+              isShortDisabled
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-opacity-90 cursor-pointer active:scale-95"
+            }`}
+            whileHover={!isShortDisabled ? { scale: 1.03 } : {}}
+            whileTap={!isShortDisabled ? { scale: 0.97 } : {}}
           >
             {isPending && selectedPosition === "short" ? "Waiting..." : "SHORT"}
           </motion.button>

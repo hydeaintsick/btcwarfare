@@ -9,21 +9,23 @@ import { formatAddress } from "@/lib/utils";
 
 export function Header() {
   const pathname = usePathname();
-  const { isConnected, address, disconnect, connect, isConnecting } = useWallet();
+  const { isConnected, address, disconnect, connect, isConnecting } =
+    useWallet();
   const [showMenu, setShowMenu] = React.useState(false);
 
   // Close menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.user-menu-container')) {
+      if (!target.closest(".user-menu-container")) {
         setShowMenu(false);
       }
     };
 
     if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showMenu]);
 
@@ -99,6 +101,29 @@ export function Header() {
 
           {/* User Menu */}
           <div className="flex items-center gap-4">
+            {/* Play Button - Only visible when connected */}
+            {isConnected && (
+              <Link href="/battle">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`px-3 py-2 rounded-lg transition-all flex items-center gap-2 ${
+                    pathname === "/battle"
+                      ? "bg-neon-cyan/30 text-neon-cyan"
+                      : "bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30"
+                  }`}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                  </svg>
+                  <span className="text-sm font-medium">Play</span>
+                </motion.button>
+              </Link>
+            )}
             {isConnected && address ? (
               <div className="relative user-menu-container">
                 <button
@@ -142,7 +167,7 @@ export function Header() {
                 disabled={isConnecting}
                 className="px-4 py-2 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                {isConnecting ? "Connecting..." : "Connect Wallet"}
               </button>
             )}
           </div>
@@ -151,4 +176,3 @@ export function Header() {
     </header>
   );
 }
-

@@ -95,6 +95,13 @@ export function useWallet() {
       setUser(userData);
       setIsConnected(true);
 
+      // Émettre un événement pour notifier les autres composants
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("auth-changed", { detail: { connected: true } })
+        );
+      }
+
       // Rafraîchir les infos utilisateur pour être sûr
       try {
         const { user: freshUser } = await apiClient.getMe();
@@ -116,6 +123,13 @@ export function useWallet() {
     setIsConnected(false);
     apiClient.setToken(null);
     localStorage.removeItem("auth_token");
+
+    // Émettre un événement pour notifier les autres composants
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("auth-changed", { detail: { connected: false } })
+      );
+    }
   };
 
   const refreshUser = useCallback(async () => {

@@ -1,5 +1,5 @@
 "use client";
-
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useWallet } from "@/hooks/useWallet";
@@ -8,6 +8,11 @@ import { BattlePreview } from "@/components/BattlePreview";
 
 export default function Home() {
   const { isConnected } = useWallet();
+
+  useEffect(() => {
+    console.log("isConnected", isConnected);
+  }, [isConnected]);
+
   const currencySymbol = "ETH"; // ETH or USDT depending on user choice
 
   return (
