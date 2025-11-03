@@ -50,9 +50,9 @@ export function OrderBook() {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="glass-strong rounded-xl p-6 backdrop-blur-xl"
+      className="glass-strong rounded-xl p-6 backdrop-blur-xl h-full flex flex-col"
     >
-      <div className="mb-4">
+      <div className="mb-4 flex-shrink-0">
         <h3 className="text-xl font-bold neon-text mb-2">Carnet d'ordres</h3>
         {orderBook.spread !== undefined && (
           <div className="text-sm text-gray-400">
@@ -64,14 +64,14 @@ export function OrderBook() {
         )}
       </div>
 
-      <div className="space-y-4">
+      <div className="flex-grow flex flex-col min-h-0">
         {/* Asks (Ordres de vente - en haut, en magenta) */}
-        <div>
+        <div className="flex-shrink-0 mb-4">
           <div className="text-xs text-gray-400 mb-2 px-2 flex justify-between">
             <span>Prix (Ask)</span>
             <span>Quantité</span>
           </div>
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+          <div className="space-y-1 max-h-32 overflow-y-auto">
             <AnimatePresence>
               {topAsks.map((ask, index) => {
                 const hasChanged = getPriceChange(ask.price, false);
@@ -103,15 +103,15 @@ export function OrderBook() {
         </div>
 
         {/* Séparateur */}
-        <div className="border-t border-gray-700 my-2"></div>
+        <div className="border-t border-gray-700 my-2 flex-shrink-0"></div>
 
         {/* Bids (Ordres d'achat - en bas, en cyan) */}
-        <div>
-          <div className="text-xs text-gray-400 mb-2 px-2 flex justify-between">
+        <div className="flex-grow flex flex-col min-h-0">
+          <div className="text-xs text-gray-400 mb-2 px-2 flex justify-between flex-shrink-0">
             <span>Prix (Bid)</span>
             <span>Quantité</span>
           </div>
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+          <div className="space-y-1 flex-grow overflow-y-auto min-h-0">
             <AnimatePresence>
               {topBids.map((bid, index) => {
                 const hasChanged = getPriceChange(bid.price, true);

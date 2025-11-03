@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Countdown } from "@/components/Countdown";
 import { BattleChart } from "@/components/BattleChart";
 import { OrderBook } from "@/components/OrderBook";
+import { BattleBetting } from "@/components/BattleBetting";
 import { useWallet } from "@/hooks/useWallet";
 import {
   useCurrentBTCPrice,
@@ -160,99 +161,20 @@ export default function BattlePage() {
                 className="max-w-7xl mx-auto"
               >
                 {/* Market Data Section: Graphique + Carnet d'ordres */}
-                <div className="mb-8 grid lg:grid-cols-3 gap-6">
-                  {/* Graphique - 2/3 de la largeur */}
-                  <div className="lg:col-span-2">
+                <div className="mb-8 grid lg:grid-cols-3 gap-6 items-stretch">
+                  {/* Graphique + Betting - 2/3 de la largeur */}
+                  <div className="lg:col-span-2 flex flex-col gap-6">
                     <BattleChart />
+                    <BattleBetting
+                      onEnterBattle={handleEnterRoom}
+                      isPending={isPending}
+                      selectedPosition={selectedPosition}
+                      battle={battle}
+                    />
                   </div>
                   {/* Carnet d'ordres - 1/3 de la largeur */}
-                  <div className="lg:col-span-1">
+                  <div className="lg:col-span-1 flex flex-col">
                     <OrderBook />
-                  </div>
-                </div>
-
-                <div className="glass-strong rounded-xl p-8 mb-8 text-center">
-                  <h2 className="text-3xl font-bold mb-4 neon-text">
-                    Choose your <span className="neon-cyan">position</span>
-                  </h2>
-                  <p className="text-gray-300 mb-4">
-                    Stake: <span className="font-bold neon-cyan">0.0015 {selectedCurrency}</span>
-                  </p>
-                  
-                  {/* Currency Selection */}
-                  <div className="mb-6 flex justify-center gap-4">
-                    <button
-                      onClick={() => setSelectedCurrency("ETH")}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                        selectedCurrency === "ETH"
-                          ? "bg-neon-cyan text-black"
-                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      }`}
-                    >
-                      ETH
-                    </button>
-                    <button
-                      onClick={() => setSelectedCurrency("USDT")}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                        selectedCurrency === "USDT"
-                          ? "bg-neon-cyan text-black"
-                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      }`}
-                    >
-                      USDT
-                    </button>
-                  </div>
-
-                  <p className="text-sm text-gray-400 mb-8">
-                    You will be automatically matched with an opposite opponent
-                  </p>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Long */}
-                    <motion.div
-                      whileHover={{ scale: 1.05, y: -10 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="glass rounded-xl p-8 border-2 border-neon-cyan cursor-pointer hover:border-opacity-80"
-                      onClick={() => handleEnterRoom(true)}
-                    >
-                      <div className="text-5xl mb-4">📈</div>
-                      <h3 className="text-2xl font-bold neon-cyan mb-4">LONG</h3>
-                      <p className="text-gray-300 mb-4">
-                        You bet the price will go up
-                      </p>
-                      <button
-                        disabled={isPending || selectedPosition === "long"}
-                        className="w-full py-3 bg-neon-cyan text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-cyan disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isPending && selectedPosition === "long" ? "Waiting..." : "Enter Long"}
-                      </button>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
-                        5% platform fee
-                      </p>
-                    </motion.div>
-
-                    {/* Short */}
-                    <motion.div
-                      whileHover={{ scale: 1.05, y: -10 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="glass rounded-xl p-8 border-2 border-neon-pink cursor-pointer hover:border-opacity-80"
-                      onClick={() => handleEnterRoom(false)}
-                    >
-                      <div className="text-5xl mb-4">📉</div>
-                      <h3 className="text-2xl font-bold neon-pink mb-4">SHORT</h3>
-                      <p className="text-gray-300 mb-4">
-                        You bet the price will go down
-                      </p>
-                      <button
-                        disabled={isPending || selectedPosition === "short"}
-                        className="w-full py-3 bg-neon-pink text-black font-bold rounded-lg hover:bg-opacity-90 transition-all glow-pink disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isPending && selectedPosition === "short" ? "Waiting..." : "Enter Short"}
-                      </button>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
-                        5% platform fee
-                      </p>
-                    </motion.div>
                   </div>
                 </div>
               </motion.div>
