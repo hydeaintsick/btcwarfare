@@ -395,6 +395,37 @@ class ApiClient {
       body: JSON.stringify({ reason }),
     });
   }
+
+  // Market Data
+  async getRealtimePrice() {
+    return this.request<{
+      data: Array<{
+        time: string;
+        price: number;
+        timestamp: number;
+      }>;
+    }>("/market/realtime");
+  }
+
+  async getCandlesticks() {
+    return this.request<{
+      candlesticks: Array<{
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+        timestamp: number;
+      }>;
+    }>("/market/candlesticks");
+  }
+
+  async getOrderBook() {
+    return this.request<{
+      bids: Array<[number, number]>;
+      asks: Array<[number, number]>;
+      timestamp: number;
+    }>("/market/orderbook");
+  }
 }
 
 export const apiClient = new ApiClient();

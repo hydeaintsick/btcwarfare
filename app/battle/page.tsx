@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Countdown } from "@/components/Countdown";
+import { BattleChart } from "@/components/BattleChart";
+import { OrderBook } from "@/components/OrderBook";
 import { useWallet } from "@/hooks/useWallet";
 import {
   useCurrentBTCPrice,
@@ -155,8 +157,20 @@ export default function BattlePage() {
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-4xl mx-auto"
+                className="max-w-7xl mx-auto"
               >
+                {/* Market Data Section: Graphique + Carnet d'ordres */}
+                <div className="mb-8 grid lg:grid-cols-3 gap-6">
+                  {/* Graphique - 2/3 de la largeur */}
+                  <div className="lg:col-span-2">
+                    <BattleChart />
+                  </div>
+                  {/* Carnet d'ordres - 1/3 de la largeur */}
+                  <div className="lg:col-span-1">
+                    <OrderBook />
+                  </div>
+                </div>
+
                 <div className="glass-strong rounded-xl p-8 mb-8 text-center">
                   <h2 className="text-3xl font-bold mb-4 neon-text">
                     Choose your <span className="neon-cyan">position</span>

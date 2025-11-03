@@ -12,8 +12,10 @@ import walletRoutes from './routes/wallet';
 import battleRoutes from './routes/battle';
 import guaranteeRoutes from './routes/guarantee';
 import adminRoutes from './routes/admin';
+import marketRoutes from './routes/market';
 import { startBattleResolver } from './workers/battleResolver';
 import { startDepositMonitor } from './workers/depositMonitor';
+import { startPriceCollector, stopPriceCollector } from './workers/priceCollector';
 import platformConfigService from './services/platformConfigService';
 import blockchainService from './services/blockchainService';
 
@@ -37,6 +39,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/battle', battleRoutes);
 app.use('/api', guaranteeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/market', marketRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -80,6 +83,7 @@ const startServer = async () => {
     // Start background workers
     startBattleResolver();
     startDepositMonitor();
+    startPriceCollector();
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
@@ -87,4 +91,17 @@ const startServer = async () => {
 };
 
 startServer();
+
+// Gérer l'arrêt propre du serveur
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  stopPriceCollector();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  stopPriceCollector();
+  process.exit(0);
+});
 
