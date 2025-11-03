@@ -27,10 +27,29 @@ export function BattleChart() {
   } | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
-  // Formater les données pour le graphique
+  // Formater les données pour le graphique avec temps relatif (compte à rebours)
   const chartData = useMemo(() => {
+    if (priceData.length === 0) return [];
+
+    // Trouver le timestamp le plus récent (le dernier point = maintenant)
+    const latestTimestamp = Math.max(...priceData.map((p) => p.timestamp));
+
+    // Fonction pour formater le temps relatif en compte à rebours (MM:SS)
+    const formatRelativeTime = (timestamp: number): string => {
+      const diffSeconds = Math.max(
+        0,
+        Math.floor((latestTimestamp - timestamp) / 1000)
+      );
+      const minutes = Math.floor(diffSeconds / 60);
+      const seconds = diffSeconds % 60;
+      return `${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
+    };
+
     return priceData.map((point) => ({
       time: point.time,
+      relativeTime: formatRelativeTime(point.timestamp),
       price: point.price,
       timestamp: point.timestamp,
     }));
@@ -126,7 +145,8 @@ export function BattleChart() {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold neon-cyan">
-              ${currentPrice.toLocaleString("en-US", {
+              $
+              {currentPrice.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -136,8 +156,7 @@ export function BattleChart() {
                 priceChange >= 0 ? "text-green-400" : "text-red-400"
               }`}
             >
-              {priceChange >= 0 ? "↑" : "↓"}{" "}
-              {Math.abs(priceChange).toFixed(2)}%
+              {priceChange >= 0 ? "↑" : "↓"} {Math.abs(priceChange).toFixed(2)}%
             </div>
           </div>
         </div>
@@ -146,7 +165,10 @@ export function BattleChart() {
       {/* Graphique */}
       <div className="h-64 relative">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+          >
             <defs>
               <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={gradientColor} stopOpacity={0.3} />
@@ -155,7 +177,7 @@ export function BattleChart() {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
             <XAxis
-              dataKey="time"
+              dataKey="relativeTime"
               stroke="#888"
               tick={{ fill: "#888", fontSize: 10 }}
               interval="preserveStartEnd"
@@ -183,7 +205,7 @@ export function BattleChart() {
             />
             {mousePosition && mousePosition.activeIndex !== null && (
               <ReferenceLine
-                x={chartData[mousePosition.activeIndex]?.time}
+                x={chartData[mousePosition.activeIndex]?.relativeTime}
                 stroke={gradientColor}
                 strokeDasharray="5 5"
                 strokeWidth={1}
@@ -238,10 +260,18 @@ export function BattleChart() {
               }}
             >
               <div className="text-xs text-gray-400 mb-1">
-                {mousePosition.time}
+                {mousePosition.activeIndex !== null &&
+                mousePosition.activeIndex < chartData.length
+                  ? chartData[mousePosition.activeIndex].relativeTime
+                  : mousePosition.time}
               </div>
-              <div className={`font-bold ${stats.isUp ? "text-cyan-400" : "text-pink-400"}`}>
-                ${mousePosition.price?.toLocaleString("en-US", {
+              <div
+                className={`font-bold ${
+                  stats.isUp ? "text-cyan-400" : "text-pink-400"
+                }`}
+              >
+                $
+                {mousePosition.price?.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -254,7 +284,9 @@ export function BattleChart() {
       {/* Affichage des bougies en mini-format sous le graphique */}
       {candlesticks.length > 0 && (
         <div className="mt-4">
-          <div className="text-xs text-gray-400 mb-2">Candlesticks (5 minutes)</div>
+          <div className="text-xs text-gray-400 mb-2">
+            Candlesticks (5 minutes)
+          </div>
           <div className="flex gap-1 justify-between">
             {candlesticks.map((candle, index) => {
               const isUp = candle.close >= candle.open;
@@ -265,10 +297,22 @@ export function BattleChart() {
 
               // Calculer les positions relatives dans la hauteur disponible
               const candleHeight = 64; // hauteur en px
-              const highY = priceRange > 0 ? ((maxPrice - candle.high) / priceRange) * candleHeight : 0;
-              const lowY = priceRange > 0 ? ((maxPrice - candle.low) / priceRange) * candleHeight : candleHeight;
-              const openY = priceRange > 0 ? ((maxPrice - candle.open) / priceRange) * candleHeight : candleHeight / 2;
-              const closeY = priceRange > 0 ? ((maxPrice - candle.close) / priceRange) * candleHeight : candleHeight / 2;
+              const highY =
+                priceRange > 0
+                  ? ((maxPrice - candle.high) / priceRange) * candleHeight
+                  : 0;
+              const lowY =
+                priceRange > 0
+                  ? ((maxPrice - candle.low) / priceRange) * candleHeight
+                  : candleHeight;
+              const openY =
+                priceRange > 0
+                  ? ((maxPrice - candle.open) / priceRange) * candleHeight
+                  : candleHeight / 2;
+              const closeY =
+                priceRange > 0
+                  ? ((maxPrice - candle.close) / priceRange) * candleHeight
+                  : candleHeight / 2;
 
               const bodyTop = Math.min(openY, closeY);
               const bodyBottom = Math.max(openY, closeY);
@@ -281,7 +325,11 @@ export function BattleChart() {
                   key={index}
                   className="flex-1 relative glass rounded p-1"
                   style={{ height: `${candleHeight}px` }}
-                  title={`O: $${candle.open.toFixed(2)} H: $${candle.high.toFixed(2)} L: $${candle.low.toFixed(2)} C: $${candle.close.toFixed(2)}`}
+                  title={`O: $${candle.open.toFixed(
+                    2
+                  )} H: $${candle.high.toFixed(2)} L: $${candle.low.toFixed(
+                    2
+                  )} C: $${candle.close.toFixed(2)}`}
                 >
                   {/* Mèche supérieure */}
                   {wickTopHeight > 0 && (
@@ -325,4 +373,3 @@ export function BattleChart() {
     </motion.div>
   );
 }
-
