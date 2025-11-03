@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { ethers } from 'ethers';
-import User from '../models/User';
+import User, { IUser } from '../models/User';
 import Transaction from '../models/Transaction';
 import { generateNonce, verifySignature, createAuthMessage } from '../utils/signature';
 import { createToken, authenticate, AuthRequest } from '../middleware/auth';
@@ -23,7 +23,7 @@ router.post('/challenge', async (req: Request, res: Response) => {
     const normalizedAddress = walletAddress.toLowerCase();
 
     // Trouver ou créer l'utilisateur
-    let user = await User.findOne({ walletAddress: normalizedAddress });
+    let user: IUser | null = await User.findOne({ walletAddress: normalizedAddress });
     
     if (!user) {
       // Créer un nouvel utilisateur
@@ -94,7 +94,7 @@ router.post('/verify', async (req: Request, res: Response) => {
     await user.save();
 
     // Créer un token JWT
-    const token = createToken(user._id.toString());
+    const token = createToken(String(user._id));
 
     // Calculer le solde dynamiquement à partir des transactions
     const completedTransactions = await Transaction.find({

@@ -167,7 +167,7 @@ router.post('/check-deposit', async (req: AuthRequest, res: Response) => {
 
     // Utiliser le service de dépôt pour vérifier et traiter
     const result = await depositService.checkTransactionForUser(
-      user._id.toString(),
+      String(user._id),
       txHash,
       currency
     );
@@ -610,7 +610,7 @@ router.post('/watch-topup', async (req: AuthRequest, res: Response) => {
 
     // SÉCURITÉ CRITIQUE: Utiliser checkTransactionForUser qui fait TOUTES les validations
     const result = await depositService.checkTransactionForUser(
-      req.userId,
+      req.userId!,
       txHash,
       currency
     );
@@ -663,7 +663,7 @@ router.post('/watch-topup', async (req: AuthRequest, res: Response) => {
         
         try {
           const retryResult = await depositService.checkTransactionForUser(
-            req.userId,
+            req.userId!,
             txHash,
             currency
           );

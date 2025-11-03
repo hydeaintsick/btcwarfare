@@ -128,7 +128,7 @@ class BattleService {
       });
 
       for (const battle of expiredBattles) {
-        await this.resolveBattle(battle._id);
+        await this.resolveBattle(battle._id as Types.ObjectId);
       }
     } catch (error) {
       console.error('Resolve expired battles error:', error);

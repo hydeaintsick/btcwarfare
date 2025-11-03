@@ -1,6 +1,6 @@
 import Queue from '../models/Queue';
 import User from '../models/User';
-import Battle from '../models/Battle';
+import Battle, { IBattle } from '../models/Battle';
 import Transaction from '../models/Transaction';
 import { Types } from 'mongoose';
 
@@ -8,7 +8,7 @@ class MatchingService {
   /**
    * Matche un joueur Long avec un joueur Short
    */
-  async matchPlayers(): Promise<Battle | null> {
+  async matchPlayers(): Promise<IBattle | null> {
     try {
       // Récupérer le premier Long et le premier Short (FIFO)
       const longQueue = await Queue.findOne({ position: 'long' }).sort({ joinedAt: 1 });

@@ -11,6 +11,8 @@ export interface IBattle extends Document {
   status: 'active' | 'resolved' | 'cancelled';
   winner?: Types.ObjectId;
   resolvedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const BattleSchema: Schema = new Schema(

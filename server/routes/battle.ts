@@ -1,7 +1,8 @@
 import express, { Response } from 'express';
+import { Types } from 'mongoose';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import Queue from '../models/Queue';
-import Battle from '../models/Battle';
+import Battle, { IBattle } from '../models/Battle';
 import User from '../models/User';
 import matchingService from '../services/matchingService';
 import battleService from '../services/battleService';
@@ -69,7 +70,7 @@ router.post('/enter', async (req: AuthRequest, res: Response) => {
 
     if (battle) {
       // Battle créée, mettre à jour le prix de départ
-      await battleService.updateBattleStartPrice(battle._id);
+      await battleService.updateBattleStartPrice(battle._id as Types.ObjectId);
 
       res.json({
         message: 'Battle created',
@@ -126,7 +127,7 @@ router.get('/current', async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer le prix actuel
-    const priceData = await battleService.updateBattleStartPrice(battle._id);
+    const priceData = await battleService.updateBattleStartPrice(battle._id as Types.ObjectId);
     
     res.json({
       battle: {
@@ -230,14 +231,14 @@ router.post('/resolve/:id', async (req: AuthRequest, res: Response) => {
 
     // Vérifier que l'utilisateur fait partie de la battle
     if (
-      battle.longPlayer.toString() !== user._id.toString() &&
-      battle.shortPlayer.toString() !== user._id.toString()
+      battle.longPlayer.toString() !== String(user._id) &&
+      battle.shortPlayer.toString() !== String(user._id)
     ) {
       res.status(403).json({ error: 'Not authorized to resolve this battle' });
       return;
     }
 
-    const resolved = await battleService.resolveBattle(battle._id);
+    const resolved = await battleService.resolveBattle(battle._id as Types.ObjectId);
     
     if (!resolved) {
       res.status(400).json({ error: 'Battle cannot be resolved yet or already resolved' });

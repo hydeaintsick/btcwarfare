@@ -157,6 +157,11 @@ class DepositService {
 
       for (const event of events) {
         try {
+          // Type guard pour vérifier que event a la propriété args
+          if (!('args' in event) || !event.args) {
+            continue;
+          }
+          
           const txHash = event.transactionHash;
           const from = event.args[0].toLowerCase();
           const value = event.args[2];

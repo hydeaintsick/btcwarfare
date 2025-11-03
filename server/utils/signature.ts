@@ -1,10 +1,11 @@
 import { ethers } from 'ethers';
+import { randomBytes } from 'crypto';
 
 /**
  * Génère un nonce aléatoire pour l'authentification
  */
 export const generateNonce = (): string => {
-  return ethers.randomBytes(32).toString('hex');
+  return randomBytes(32).toString('hex');
 };
 
 /**
