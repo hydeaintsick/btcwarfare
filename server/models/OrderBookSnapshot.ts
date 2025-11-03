@@ -28,10 +28,10 @@ const OrderBookSnapshotSchema: Schema = new Schema(
   }
 );
 
-// TTL index pour supprimer automatiquement les données après 6 minutes (360 secondes)
+// TTL index pour supprimer automatiquement les données après 15 minutes (900 secondes)
 OrderBookSnapshotSchema.index(
   { createdAt: 1 },
-  { expireAfterSeconds: 360 }
+  { expireAfterSeconds: 900 }
 );
 
 export default mongoose.model<IOrderBookSnapshot>('OrderBookSnapshot', OrderBookSnapshotSchema);

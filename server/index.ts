@@ -16,8 +16,10 @@ import marketRoutes from './routes/market';
 import { startBattleResolver } from './workers/battleResolver';
 import { startDepositMonitor } from './workers/depositMonitor';
 import { startPriceCollector, stopPriceCollector } from './workers/priceCollector';
+import { startDataCleanup, stopDataCleanup } from './workers/dataCleanup';
 import platformConfigService from './services/platformConfigService';
 import blockchainService from './services/blockchainService';
+import { ensureTTLIndexes } from './utils/ensureTTLIndexes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -61,6 +63,9 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDatabase();
 
+    // S'assurer que les index TTL sont correctement créés
+    await ensureTTLIndexes();
+
     // Initialiser les configurations par défaut de la plateforme
     await platformConfigService.initializeDefaults();
     console.log('✅ Platform configurations initialized');
@@ -84,6 +89,7 @@ const startServer = async () => {
     startBattleResolver();
     startDepositMonitor();
     startPriceCollector();
+    startDataCleanup();
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
@@ -96,12 +102,14 @@ startServer();
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
   stopPriceCollector();
+  stopDataCleanup();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
   stopPriceCollector();
+  stopDataCleanup();
   process.exit(0);
 });
 

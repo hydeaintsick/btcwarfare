@@ -29,10 +29,10 @@ const PriceDataSchema: Schema = new Schema(
   }
 );
 
-// TTL index pour supprimer automatiquement les données après 6 minutes (360 secondes)
+// TTL index pour supprimer automatiquement les données après 15 minutes (900 secondes)
 PriceDataSchema.index(
   { createdAt: 1 },
-  { expireAfterSeconds: 360 }
+  { expireAfterSeconds: 900 }
 );
 
 export default mongoose.model<IPriceData>('PriceData', PriceDataSchema);
